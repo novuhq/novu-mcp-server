@@ -31,19 +31,19 @@ The server supports both US and EU regions. Use the region parameter to specify 
 **US Region** (default if no parameter specified):
 ```
 # Streamable HTTPS/MCP
-https://novu.mcp.co/mcp?region=us
+https://mcp.novu.co/mcp?region=us
 
 # SSE (Deprecated)  
-https://novu.mcp.co/sse?region=us
+https://mcp.novu.co/sse?region=us
 ```
 
 **EU Region:**
 ```
 # Streamable HTTPS/MCP
-https://novu.mcp.co/mcp?region=eu
+https://mcp.novu.co/mcp?region=eu
 
 # SSE (Deprecated)
-https://novu.mcp.co/sse?region=eu
+https://mcp.novu.co/sse?region=eu
 ```
 
 **Note**: If no region parameter is provided, the server defaults to the US region (`api.novu.co`). For EU region, it connects to `eu.api.novu.co`.
@@ -75,7 +75,7 @@ Install the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote) and upd
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://novu.mcp.co/mcp",
+        "https://mcp.novu.co/mcp",
         "--header",
         "Authorization:Bearer your-novu-api-key"
       ]
@@ -110,7 +110,7 @@ For local development:
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://novu.mcp.co/sse",
+        "https://mcp.novu.co/sse",
         "--header",
         "Authorization:Bearer your-novu-api-key"
       ]
@@ -126,13 +126,13 @@ Restart Claude Desktop and the Novu tools will be available.
 For other MCP clients that support remote servers:
 
 #### Streamable HTTPS/MCP (Recommended)
-- **US Region**: `https://novu.mcp.co/mcp` or `https://novu.mcp.co/mcp?region=us`
-- **EU Region**: `https://novu.mcp.co/mcp?region=eu`
+- **US Region**: `https://mcp.novu.co/mcp` or `https://mcp.novu.co/mcp?region=us`
+- **EU Region**: `https://mcp.novu.co/mcp?region=eu`
 - **Authorization Header**: `Authorization: Bearer your-novu-api-key`
 
 #### SSE (Deprecated)
-- **US Region**: `https://novu.mcp.co/sse` or `https://novu.mcp.co/sse?region=us`
-- **EU Region**: `https://novu.mcp.co/sse?region=eu`
+- **US Region**: `https://mcp.novu.co/sse` or `https://mcp.novu.co/sse?region=us`
+- **EU Region**: `https://mcp.novu.co/sse?region=eu`
 - **Authorization Header**: `Authorization: Bearer your-novu-api-key`
 
 ## Available Tools
