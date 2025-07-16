@@ -1,153 +1,143 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import { ValidationUtils } from '../utils/validation';
-import { NovuApiUtils } from '../utils/api';
-import type { ServerRegion, TriggerWorkflowRequest } from '../types';
+import { WorkflowValidationUtils } from '../utils/workflow-validation';
+import { ToolFactory } from '../utils/tool-factory';
+import type { ServerRegion } from '../types';
+import {
+	triggerWorkflowInputSchema,
+	createWorkflowInputSchema,
+	updateWorkflowInputSchema
+} from '../utils/workflow-schemas';
 
 export function registerWorkflowTools(
 	server: McpServer, 
 	getApiKey: () => string | null, 
 	getServerRegion: () => ServerRegion
 ) {
-	// Get all workflows from Novu API
-	server.tool(
+	// Get all workflows - simple GET endpoint
+	ToolFactory.createGetTool(
+		server,
+		getApiKey,
+		getServerRegion,
 		"get_workflows",
 		"Get all available workflows from your Novu application with their basic information and identifiers",
-		{
-			idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
-		},
-		async ({ idempotencyKey }) => {
-			// Validate API key first
-			const apiKeyError = ValidationUtils.validateApiKey(getApiKey());
-			if (apiKeyError) {
-				return apiKeyError;
-			}
-
-			try {
-				console.log("Fetching workflows from Novu API...");
-				
-				const response = await fetch(`${NovuApiUtils.getBaseUrl(getServerRegion())}/v2/workflows`, {
-					method: "GET",
-					headers: NovuApiUtils.prepareHeaders(getApiKey()!, idempotencyKey)
-				});
-
-				return await NovuApiUtils.handleApiResponse(response, "fetched workflows");
-
-			} catch (error) {
-				console.error("Error fetching workflows:", error);
-				return {
-					content: [{ 
-						type: "text" as const, 
-						text: `Error: Failed to fetch workflows. ${error instanceof Error ? error.message : 'Unknown error'}` 
-					}],
-				};
-			}
-		}
+		"/v2/workflows",
+		"fetched workflows"
 	);
 
-	// Get a specific workflow by ID from Novu API
-	server.tool(
+	// Get specific workflow by ID - simple GET by ID
+	ToolFactory.createGetByIdTool(
+		server,
+		getApiKey,
+		getServerRegion,
 		"get_workflow",
 		"Get detailed information about a specific workflow including its steps, channels, payload structure, and configuration",
-		{
-			workflowId: z.string().describe("The workflow ID to retrieve (obtained from get_workflows)"),
-			idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
-		},
-		async ({ workflowId, idempotencyKey }) => {
-			// Validate API key first
-			const apiKeyError = ValidationUtils.validateApiKey(getApiKey());
-			if (apiKeyError) {
-				return apiKeyError;
-			}
-
-			try {
-				console.log(`Fetching workflow ${workflowId} from Novu API...`);
-				
-				const response = await fetch(`${NovuApiUtils.getBaseUrl(getServerRegion())}/v2/workflows/${workflowId}`, {
-					method: "GET",
-					headers: NovuApiUtils.prepareHeaders(getApiKey()!, idempotencyKey)
-				});
-
-				return await NovuApiUtils.handleApiResponse(response, "fetched workflow", workflowId);
-
-			} catch (error) {
-				console.error("Error fetching workflow:", error);
-				return {
-					content: [{ 
-						type: "text" as const, 
-						text: `Error: Failed to fetch workflow ${workflowId}. ${error instanceof Error ? error.message : 'Unknown error'}` 
-					}],
-				};
-			}
-		}
+		"/v2/workflows/{id}",
+		"fetched workflow",
+		"workflowId",
+		"The workflow ID to retrieve (obtained from get_workflows)"
 	);
 
-	// Trigger a workflow from Novu API
-	server.tool(
-		"trigger_workflow",
-		"Trigger a workflow to send notifications to a subscriber with custom payload data",
-		{
-			workflowName: z.string().describe("The workflow name/identifier to trigger (obtained from get_workflows)"),
-			subscriberId: z.string().describe("The subscriber ID to send the notification to (obtained from find_subscribers)"),
-			payload: z.record(z.any()).describe("The payload data for the workflow (structure obtained from get_workflow)"),
-			idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
-		},
-		async ({ workflowName, subscriberId, payload, idempotencyKey }) => {
-			// Validate API key first
-			const apiKeyError = ValidationUtils.validateApiKey(getApiKey());
-			if (apiKeyError) {
-				return apiKeyError;
+	// Trigger workflow - custom logic using the factory
+	ToolFactory.createTool(server, getApiKey, getServerRegion, {
+		name: "trigger_workflow",
+		description: "Trigger a workflow to send notifications to a subscriber with custom payload data",
+		schema: triggerWorkflowInputSchema,
+		handler: ToolFactory.handleTriggerWorkflow
+	});
+
+	// Create workflow - complex validation and POST
+	ToolFactory.createTool(server, getApiKey, getServerRegion, {
+		name: "create_workflow",
+		description: "Create a new workflow in Novu with comprehensive configuration including steps, preferences, and validation.",
+		schema: createWorkflowInputSchema,
+		handler: async (input, context) => {
+			console.log(`Creating workflow "${input.name}" with ID "${input.workflowId}"`);
+			
+			// Validate step configurations
+			const stepValidationError = WorkflowValidationUtils.validateWorkflowSteps(input.steps);
+			if (stepValidationError) {
+				return stepValidationError;
 			}
+			
+			// Build request body, filtering out undefined values
+			const requestBody: any = {
+				name: input.name,
+				workflowId: input.workflowId,
+				steps: input.steps,
+				active: input.active ?? false,
+				isTranslationEnabled: input.isTranslationEnabled ?? false,
+				__source: input.__source ?? "editor"
+			};
 
-			try {
-				console.log(`Triggering workflow "${workflowName}" for subscriber "${subscriberId}"`);
-				
-				// Build request body
-				const requestBody: TriggerWorkflowRequest = {
-					name: workflowName,
-					to: [{ subscriberId: subscriberId }],
-					payload: payload
-				};
+			// Add optional fields only if they exist
+			if (input.description) requestBody.description = input.description;
+			if (input.tags) requestBody.tags = input.tags;
+			if (input.validatePayload !== undefined) requestBody.validatePayload = input.validatePayload;
+			if (input.payloadSchema) requestBody.payloadSchema = input.payloadSchema;
+			if (input.preferences) requestBody.preferences = input.preferences;
 
-				const response = await fetch(`${NovuApiUtils.getBaseUrl(getServerRegion())}/v1/events/trigger`, {
-					method: "POST",
-					headers: {
-						...NovuApiUtils.prepareHeaders(getApiKey()!, idempotencyKey),
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify(requestBody)
-				});
-
-				if (!response.ok) {
-					const errorText = await response.text();
-					console.error("Novu API Error:", response.status, errorText);
-					return {
-						content: [{ 
-							type: "text" as const, 
-							text: `Error: Failed to trigger workflow "${workflowName}". Status: ${response.status}, Message: ${errorText}` 
-						}],
-					};
-				}
-
-				const data = await response.json();
-				console.log(`Successfully triggered workflow "${workflowName}" for subscriber "${subscriberId}"`);
-				
-				return {
-					content: [{ 
-						type: "text" as const, 
-						text: `Successfully triggered workflow "${workflowName}" for subscriber "${subscriberId}":\n\n${JSON.stringify(data, null, 2)}` 
-					}],
-				};
-
-			} catch (error) {
-				console.error("Error triggering workflow:", error);
-				return {
-					content: [{ 
-						type: "text" as const, 
-						text: `Error: Failed to trigger workflow "${workflowName}". ${error instanceof Error ? error.message : 'Unknown error'}` 
-					}],
-				};
-			}
+			return ToolFactory.makeApiRequest(context, {
+				method: 'POST',
+				endpoint: '/v2/workflows',
+				body: requestBody,
+				successMessage: 'created workflow',
+				identifier: input.workflowId,
+				customHeaders: { "Content-Type": "application/json" }
+			}, input.idempotencyKey);
 		}
+	});
+
+	// Update workflow - complex validation and PUT
+	ToolFactory.createTool(server, getApiKey, getServerRegion, {
+		name: "update_workflow",
+		description: "Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation. IMPORTANT: When using dynamic variables in message content, always use {{payload.variableName}} syntax, NOT {{variableName}}. For example: use '{{payload.userName}}' not '{{userName}}'.",
+		schema: updateWorkflowInputSchema,
+		handler: async (input, context) => {
+			console.log(`Updating workflow "${input.workflowId}" with name "${input.name}"`);
+			
+			// Validate step configurations
+			const stepValidationError = WorkflowValidationUtils.validateWorkflowSteps(input.steps);
+			if (stepValidationError) {
+				return stepValidationError;
+			}
+			
+			// Build request body, always including required fields
+			const requestBody: any = {
+				name: input.name,
+				steps: input.steps,
+				preferences: input.preferences,
+				origin: input.origin,
+				active: input.active ?? false,
+				isTranslationEnabled: input.isTranslationEnabled ?? false
+			};
+
+			// Add optional fields only if they exist
+			if (input.description) requestBody.description = input.description;
+			if (input.tags) requestBody.tags = input.tags;
+			if (input.validatePayload !== undefined) requestBody.validatePayload = input.validatePayload;
+			if (input.payloadSchema) requestBody.payloadSchema = input.payloadSchema;
+
+			return ToolFactory.makeApiRequest(context, {
+				method: 'PUT',
+				endpoint: `/v2/workflows/${input.workflowId}`,
+				body: requestBody,
+				successMessage: 'updated workflow',
+				identifier: input.workflowId,
+				customHeaders: { "Content-Type": "application/json" }
+			}, input.idempotencyKey);
+		}
+	});
+
+	// Delete workflow - simple DELETE by ID
+	ToolFactory.createDeleteTool(
+		server,
+		getApiKey,
+		getServerRegion,
+		"delete_workflow",
+		"Delete an existing workflow from Novu by its unique identifier. This action is irreversible.",
+		"/v2/workflows/{id}",
+		"deleted workflow",
+		"workflowId",
+		"The unique identifier of the workflow to delete"
 	);
 }   
