@@ -50,6 +50,7 @@ export default {
 			return NovuMCP.serve("/mcp").fetch(newRequest, env, ctx);
 		}
 
-		return new Response("Not found", { status: 404 });
+		// Redirect all other paths to docs
+		return Response.redirect("https://docs.novu.co/", 302);
 	},
 };
