@@ -83,11 +83,11 @@ export class WorkflowValidationUtils {
 	 * Validate in-app step requirements
 	 */
 	private static validateInAppStep(step: WorkflowStep): ApiResponse | null {
-		if (!step.controlValues?.title || !step.controlValues?.content) {
+		if (!step.controlValues?.subject || !step.controlValues?.body) {
 			return {
 				content: [{ 
 					type: "text" as const, 
-					text: `Error: In-app step "${step.name}" requires both title and content in controlValues. Remember to use {{payload.variableName}} syntax for dynamic variables.` 
+					text: `Error: In-app step "${step.name}" requires both subject and body in controlValues. Remember to use {{payload.variableName}} syntax for dynamic variables.` 
 				}],
 			};
 		}
@@ -98,11 +98,11 @@ export class WorkflowValidationUtils {
 	 * Validate push step requirements
 	 */
 	private static validatePushStep(step: WorkflowStep): ApiResponse | null {
-		if (!step.controlValues?.title || !step.controlValues?.content) {
+		if (!step.controlValues?.subject || !step.controlValues?.body) {
 			return {
 				content: [{ 
 					type: "text" as const, 
-					text: `Error: Push step "${step.name}" requires both title and content in controlValues. Remember to use {{payload.variableName}} syntax for dynamic variables.` 
+					text: `Error: Push step "${step.name}" requires both subject and body in controlValues. Remember to use {{payload.variableName}} syntax for dynamic variables.` 
 				}],
 			};
 		}

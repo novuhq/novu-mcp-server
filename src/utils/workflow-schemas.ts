@@ -29,16 +29,14 @@ export const stepControlValuesSchema = z.object({
 	// Common skip condition for all step types
 	skip: z.object({}).passthrough().optional().describe("JSONLogic filter conditions for conditionally skipping step execution"),
 	
-	// Email step specific fields
-	subject: z.string().optional().describe("Subject of the email (required for email steps). Use {{payload.variableName}} syntax for variables, e.g., 'Welcome {{payload.userName}}'"),
-	body: z.string().optional().describe("Body content of the email, either a valid Maily JSON object, or html string (required for email steps). Use {{payload.variableName}} syntax for variables, e.g., 'Hello {{payload.userName}}, your order {{payload.orderId}} is ready!'"),
+	// Email, In-App, and Push step specific fields (all use subject/body)
+	subject: z.string().optional().describe("Subject/title of the email, in-app, or push notification (required for email, in-app, and push steps). Use {{payload.variableName}} syntax for variables, e.g., 'Welcome {{payload.userName}}'"),
+	body: z.string().optional().describe("Body content of the email, in-app, or push notification (required for email, in-app, and push steps). For email: either a valid Maily JSON object, or html string. For in-app and push: plain text content. Use {{payload.variableName}} syntax for variables, e.g., 'Hello {{payload.userName}}, your order {{payload.orderId}} is ready!'"),
 	editorType: editorTypeSchema.optional().describe("Type of editor to use for the email body"),
-	disableOutputSanitization: z.boolean().optional().describe("Disable sanitization of the email output"),
+	disableOutputSanitization: z.boolean().optional().describe("Disable sanitization of the email or in-app output"),
 	layoutId: z.string().nullable().optional().describe("Layout ID to use for the email. Null means no layout"),
 	
-	// In-App and Push step specific fields
-	title: z.string().optional().describe("Title of the notification (required for in-app and push steps). Use {{payload.variableName}} syntax for variables, e.g., 'New message from {{payload.senderName}}'"),
-	content: z.string().optional().describe("Content of the notification (required for in-app and push steps). Use {{payload.variableName}} syntax for variables, e.g., 'You have {{payload.messageCount}} new messages'"),
+	// In-App step specific fields
 	avatar: z.string().optional().describe("Avatar URL for the in-app notification. Can use {{payload.variableName}} syntax, e.g., '{{payload.avatarUrl}}'"),
 	primaryAction: actionSchema.optional().describe("Primary action configuration for in-app notification"),
 	secondaryAction: actionSchema.optional().describe("Secondary action configuration for in-app notification"),
