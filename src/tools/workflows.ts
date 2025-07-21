@@ -90,11 +90,7 @@ export function registerWorkflowTools(
 	// Update workflow - complex validation and PUT
 	ToolFactory.createTool(server, getApiKey, getServerRegion, {
 		name: "update_workflow",
-<<<<<<< HEAD
 		description: "Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation. IMPORTANT: When using dynamic variables in message content, always use {{payload.variableName}} syntax, NOT {{variableName}}. For example: use '{{payload.userName}}' not '{{userName}}'. NOTE: Email, in-app, and push steps all use 'subject' and 'body' properties. SMS steps use 'message' property.",
-=======
-		description: "Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation. IMPORTANT: When using dynamic variables in message content, always use {{payload.variableName}} syntax, NOT {{variableName}}. For example: use '{{payload.userName}}' not '{{userName}}'.",
->>>>>>> 6762625ceb26f1b57814bde7d278058d681a145b
 		schema: updateWorkflowInputSchema,
 		handler: async (input, context) => {
 			console.log(`Updating workflow "${input.workflowId}" with name "${input.name}"`);
