@@ -31,7 +31,7 @@ The server supports both US and EU regions. Use the region parameter to specify 
 **US Region** (default if no parameter specified):
 ```
 # Streamable HTTPS/MCP
-https://mcp.novu.co/mcp?region=us
+https://mcp.novu.co/?region=us
 
 # SSE (Deprecated)  
 https://mcp.novu.co/sse?region=us
@@ -40,7 +40,7 @@ https://mcp.novu.co/sse?region=us
 **EU Region:**
 ```
 # Streamable HTTPS/MCP
-https://mcp.novu.co/mcp?region=eu
+https://mcp.novu.co/?region=eu
 
 # SSE (Deprecated)
 https://mcp.novu.co/sse?region=eu
@@ -75,7 +75,7 @@ Install the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote) and upd
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://mcp.novu.co/mcp",
+        "https://mcp.novu.co/",
         "--header",
         "Authorization:Bearer your-novu-api-key"
       ]
@@ -92,7 +92,7 @@ For local development:
       "command": "npx", 
       "args": [
         "mcp-remote",
-        "http://localhost:8787/mcp",
+        "http://localhost:8787/",
         "--header",
         "Authorization:Bearer your-novu-api-key"
       ]
@@ -126,8 +126,8 @@ Restart Claude Desktop and the Novu tools will be available.
 For other MCP clients that support remote servers:
 
 #### Streamable HTTPS/MCP (Recommended)
-- **US Region**: `https://mcp.novu.co/mcp` or `https://mcp.novu.co/mcp?region=us`
-- **EU Region**: `https://mcp.novu.co/mcp?region=eu`
+- **US Region**: `https://mcp.novu.co/` or `https://mcp.novu.co/?region=us`
+- **EU Region**: `https://mcp.novu.co/?region=eu`
 - **Authorization Header**: `Authorization: Bearer your-novu-api-key`
 
 #### SSE (Deprecated)
