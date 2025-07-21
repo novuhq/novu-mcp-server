@@ -48,7 +48,7 @@ export function registerWorkflowTools(
 	// Create workflow - complex validation and POST
 	ToolFactory.createTool(server, getApiKey, getServerRegion, {
 		name: "create_workflow",
-		description: "Create a new workflow in Novu with comprehensive configuration including steps, preferences, and validation.",
+		description: "Create a new workflow in Novu with comprehensive configuration including steps, preferences, and validation. IMPORTANT: When using dynamic variables in message content, always use {{payload.variableName}} syntax, NOT {{variableName}}. For example: use '{{payload.userName}}' not '{{userName}}'. NOTE: Email, in-app, and push steps all use 'subject' and 'body' properties. SMS steps use 'message' property.",
 		schema: createWorkflowInputSchema,
 		handler: async (input, context) => {
 			console.log(`Creating workflow "${input.name}" with ID "${input.workflowId}"`);
@@ -90,7 +90,7 @@ export function registerWorkflowTools(
 	// Update workflow - complex validation and PUT
 	ToolFactory.createTool(server, getApiKey, getServerRegion, {
 		name: "update_workflow",
-		description: "Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation. IMPORTANT: When using dynamic variables in message content, always use {{payload.variableName}} syntax, NOT {{variableName}}. For example: use '{{payload.userName}}' not '{{userName}}'.",
+		description: "Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation. IMPORTANT: When using dynamic variables in message content, always use {{payload.variableName}} syntax, NOT {{variableName}}. For example: use '{{payload.userName}}' not '{{userName}}'. NOTE: Email, in-app, and push steps all use 'subject' and 'body' properties. SMS steps use 'message' property.",
 		schema: updateWorkflowInputSchema,
 		handler: async (input, context) => {
 			console.log(`Updating workflow "${input.workflowId}" with name "${input.name}"`);
