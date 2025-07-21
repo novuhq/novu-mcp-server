@@ -16,7 +16,7 @@ export default {
 		// Extract server region from URL parameters (default to US)
 		const serverRegion = url.searchParams.get('region') || 'us';
 
-		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
+		if (url.pathname === "/sse") {
 			// Add API key and region to URL parameters
 			if (apiKey) {
 				url.searchParams.set('novu_api_key', apiKey);
@@ -33,7 +33,7 @@ export default {
 			return NovuMCP.serveSSE("/sse").fetch(newRequest, env, ctx);
 		}
 
-		if (url.pathname === "/mcp") {
+		if (url.pathname === "/") {
 			// Add API key and region to URL parameters
 			if (apiKey) {
 				url.searchParams.set('novu_api_key', apiKey);
@@ -47,7 +47,7 @@ export default {
 				body: request.body
 			});
 
-			return NovuMCP.serve("/mcp").fetch(newRequest, env, ctx);
+			return NovuMCP.serve("/").fetch(newRequest, env, ctx);
 		}
 
 		// Redirect all other paths to docs
