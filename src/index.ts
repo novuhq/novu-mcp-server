@@ -51,6 +51,6 @@ export default {
 		}
 
 		// Redirect all other paths to docs
-		return Response.redirect("https://docs.novu.co/", 302);
+		return Response.redirect("https://docs.novu.co/platform/additional-resources/mcp", 302);
 	},
 };
