@@ -127,6 +127,13 @@ export const triggerWorkflowInputSchema = z.object({
 	workflowName: z.string().describe("The workflow name/identifier to trigger (obtained from get_workflows)"),
 	subscriberId: z.string().describe("The subscriber ID to send the notification to (obtained from find_subscribers)"),
 	payload: z.record(z.any()).describe("The payload data for the workflow (structure obtained from get_workflow)"),
+	overrides: z.object({
+		email: z.object({ integrationIdentifier: z.string() }).optional().describe("Override the email integration used for this trigger"),
+		sms: z.object({ integrationIdentifier: z.string() }).optional().describe("Override the SMS integration used for this trigger"),
+		push: z.object({ integrationIdentifier: z.string() }).optional().describe("Override the push integration used for this trigger"),
+		chat: z.object({ integrationIdentifier: z.string() }).optional().describe("Override the chat integration used for this trigger"),
+		in_app: z.object({ integrationIdentifier: z.string() }).optional().describe("Override the in-app integration used for this trigger"),
+	}).optional().describe("Channel-specific overrides to select which integration to use. Use get_integrations to find available integration identifiers."),
 	idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
 });
 

@@ -211,16 +211,16 @@ export class ToolFactory {
 	 * Special handler for trigger workflow which has custom logic
 	 */
 	static async handleTriggerWorkflow(
-		input: { workflowName: string; subscriberId: string; payload: Record<string, any>; idempotencyKey?: string },
+		input: { workflowName: string; subscriberId: string; payload: Record<string, any>; overrides?: Record<string, { integrationIdentifier: string }>; idempotencyKey?: string },
 		context: { apiKey: string; serverRegion: ServerRegion }
 	): Promise<ApiResponse> {
 		console.log(`Triggering workflow "${input.workflowName}" for subscriber "${input.subscriberId}"`);
 		
-		// Build request body
 		const requestBody: TriggerWorkflowRequest = {
 			name: input.workflowName,
 			to: [{ subscriberId: input.subscriberId }],
-			payload: input.payload
+			payload: input.payload,
+			...(input.overrides && { overrides: input.overrides }),
 		};
 
 		const response = await fetch(`${NovuApiUtils.getBaseUrl(context.serverRegion)}/v1/events/trigger`, {

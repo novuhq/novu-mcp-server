@@ -9,6 +9,7 @@ import { registerEnvironmentTools } from '../tools/environments';
 import { registerSubscriberTools } from '../tools/subscribers';
 import { registerNotificationTools } from '../tools/notifications';
 import { registerPreferenceTools } from '../tools/preferences';
+import { registerIntegrationTools } from '../tools/integrations';
 
 // Store the current request URL for parameter access
 let currentRequestUrl: string | null = null;
@@ -59,5 +60,6 @@ export class NovuMCP extends McpAgent {
 		registerSubscriberTools(this.server, this.getApiKey, this.getServerRegion);
 		registerNotificationTools(this.server, this.getApiKey, this.getServerRegion);
 		registerPreferenceTools(this.server, this.getApiKey, this.getServerRegion);
+		registerIntegrationTools(this.server, this.getApiKey, this.getServerRegion);
 	}
 } 

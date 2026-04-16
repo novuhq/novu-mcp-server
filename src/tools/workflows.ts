@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { WorkflowValidationUtils } from '../utils/workflow-validation';
 import { ToolFactory } from '../utils/tool-factory';
 import type { ServerRegion } from '../types';
@@ -124,6 +125,57 @@ export function registerWorkflowTools(
 				successMessage: 'updated workflow',
 				identifier: input.workflowId,
 				customHeaders: { "Content-Type": "application/json" }
+			}, input.idempotencyKey);
+		}
+	});
+
+	// Cancel a triggered event by transactionId
+	ToolFactory.createDeleteTool(
+		server,
+		getApiKey,
+		getServerRegion,
+		"cancel_triggered_event",
+		"Cancel a pending triggered event (e.g. a delayed or digest notification that hasn't been sent yet) using its transactionId. The transactionId is returned when you trigger a workflow.",
+		"/v1/events/trigger/{id}",
+		"cancelled triggered event",
+		"transactionId",
+		"The transactionId of the triggered event to cancel (returned from trigger_workflow)"
+	);
+
+	// Bulk trigger workflows
+	ToolFactory.createTool(server, getApiKey, getServerRegion, {
+		name: "bulk_trigger_workflow",
+		description: "Trigger multiple workflows in a single API call. Each event in the array specifies a workflow name, subscriber, and payload. Useful for batch notification operations.",
+		schema: z.object({
+			events: z.array(z.object({
+				name: z.string().describe("The workflow name/identifier to trigger"),
+				to: z.union([
+					z.string().describe("A single subscriberId"),
+					z.object({ subscriberId: z.string() }).describe("A subscriber object with subscriberId"),
+				]).describe("The subscriber to send to"),
+				payload: z.record(z.any()).describe("The payload data for this workflow trigger"),
+				overrides: z.object({
+					email: z.object({ integrationIdentifier: z.string() }).optional(),
+					sms: z.object({ integrationIdentifier: z.string() }).optional(),
+					push: z.object({ integrationIdentifier: z.string() }).optional(),
+					chat: z.object({ integrationIdentifier: z.string() }).optional(),
+					in_app: z.object({ integrationIdentifier: z.string() }).optional(),
+				}).optional().describe("Channel-specific integration overrides"),
+			})).min(1).describe("Array of workflow trigger events"),
+			idempotencyKey: z.string().optional().describe("Optional idempotency key for the request"),
+		}),
+		handler: async (input, context) => {
+			const events = input.events.map(event => ({
+				name: event.name,
+				to: typeof event.to === 'string' ? { subscriberId: event.to } : event.to,
+				payload: event.payload,
+				...(event.overrides && { overrides: event.overrides }),
+			}));
+			return ToolFactory.makeApiRequest(context, {
+				method: 'POST',
+				endpoint: '/v1/events/trigger/bulk',
+				body: { events },
+				successMessage: `bulk triggered ${events.length} workflow(s)`,
 			}, input.idempotencyKey);
 		}
 	});

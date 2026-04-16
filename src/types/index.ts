@@ -15,6 +15,7 @@ export interface TriggerWorkflowRequest {
 	name: string;
 	to: Array<{ subscriberId: string }>;
 	payload: Record<string, any>;
+	overrides?: Record<string, { integrationIdentifier: string }>;
 }
 
 export interface ApiResponse {
