@@ -1,72 +1,85 @@
+<div align="center">
+  <a href="https://novu.co?utm_source=github" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/2233092/213641039-220ac15f-f367-4d13-9eaf-56e79433b8c1.png">
+    <img alt="Novu Logo" src="https://user-images.githubusercontent.com/2233092/213641043-3bbb3f21-3c53-4e67-afe5-755aeb222159.png" width="280"/>
+  </picture>
+  </a>
+</div>
+
+<br/>
+
+<p align="center">
+  <a href="https://www.producthunt.com/products/novu">
+    <img src="https://img.shields.io/badge/Product%20Hunt-Golden%20Kitty%20Award%202023-yellow" alt="Product Hunt">
+  </a>
+  <a href="https://news.ycombinator.com/item?id=38419513"><img src="https://img.shields.io/badge/Hacker%20News-%231-%23FF6600" alt="Hacker News"></a>
+  <a href="https://www.npmjs.com/package/@novu/js">
+    <img src="https://img.shields.io/npm/dm/@novu/js" alt="npm downloads">
+  </a>
+</p>
+
+<h1 align="center">Novu MCP Server</h1>
+
+<div align="center">
+The Model Context Protocol (MCP) server for Novu — bring AI assistants directly into your notification workflows. Manage subscribers, trigger workflows, inspect events, and tune preferences from any MCP-compatible client.
+</div>
+
+<p align="center">
+  <br />
+  <a href="https://github.novu.co?utm_campaign=gh_org_profile&utm_source=github" rel="dofollow"><strong>Visit our main GitHub Repository »</strong></a>
+  <br />
+</p>
+
 # Novu MCP Server
 
-A Model Context Protocol (MCP) server for [Novu](https://novu.co) - the open-source notification infrastructure platform. This server allows AI assistants to interact with your Novu workspace to manage notifications, subscribers, workflows, and preferences.
+## ✨ Features
 
-## Features
+A single MCP server that unlocks your entire Novu workspace for AI agents:
 
-This MCP server provides the following tools for Novu:
+- **Notifications** — fetch and filter events with full execution logs and delivery status
+- **Subscribers** — search and manage recipients by email, phone, name, or ID
+- **Workflows** — list, inspect, create, update, and trigger notification workflows
+- **Preferences** — read and update subscriber channel preferences (email, SMS, in-app, push, chat)
+- **Environments** — view environments and their configuration
+- **Integrations** — manage provider integrations across channels
+- **API Key Management** — verify API key status and active region
 
-- **Notifications**: Get and filter notification events with detailed execution logs
-- **Subscribers**: Find and manage notification subscribers  
-- **Workflows**: List, inspect, and trigger notification workflows
-- **Preferences**: Get and update subscriber notification preferences for all channels
-- **Environments**: Manage and view Novu environments
-- **API Key Management**: Check API key status and server region configuration
+## 🚀 Quick Start
 
-## Configuration
+You don't need to host anything — the server is fully managed at `mcp.novu.co`.
 
-### Novu API Key
+**Prerequisites:** A Novu account and API key from your [Novu Dashboard](https://web.novu.co/settings).
 
-You'll need a Novu API Key to use this MCP server. Get one from your [Novu Dashboard](https://web.novu.co/settings).
-
-**Authentication**: Provide your API key using the Authorization header:
-```
-Authorization: Bearer your-novu-api-key
-```
-
-### Server Region
-
-The server supports both US and EU regions. Use the region parameter to specify your preferred region:
-
-**US Region** (default if no parameter specified):
-```
-# Streamable HTTPS/MCP
-https://mcp.novu.co/?region=us
-
-# SSE (Deprecated)  
-https://mcp.novu.co/sse?region=us
+```bash
+# Ready to go — just point your MCP client at:
+https://mcp.novu.co/
 ```
 
-**EU Region:**
-```
-# Streamable HTTPS/MCP
-https://mcp.novu.co/?region=eu
+Authenticate with a standard bearer token:
 
-# SSE (Deprecated)
-https://mcp.novu.co/sse?region=eu
+```
+Authorization: Bearer <your-novu-api-key>
 ```
 
-**Note**: If no region parameter is provided, the server defaults to the US region (`api.novu.co`). For EU region, it connects to `eu.api.novu.co`.
+## 🌍 Regions
 
-Remember to include the Authorization header with your Bearer token.
+The server supports both Novu Cloud regions. Pass the region as a query parameter:
 
-## Connection Methods
+| Region | Endpoint                        |
+| ------ | ------------------------------- |
+| US (default) | `https://mcp.novu.co/?region=us` |
+| EU     | `https://mcp.novu.co/?region=eu` |
 
-This MCP server supports two connection methods:
+If no `region` is provided, the server defaults to US (`api.novu.co`). The EU region proxies to `eu.api.novu.co`.
 
-### 🚀 **Streamable HTTPS/MCP (Recommended)**
-The modern, efficient connection method using direct MCP protocol over HTTPS.
+## 🛠️ Usage
 
-### ⚠️ **SSE (Server-Sent Events) - Deprecated**
-The legacy connection method using Server-Sent Events. This method is deprecated and may be removed in future versions.
+The server speaks the Streamable HTTP MCP transport at `https://mcp.novu.co/`.
 
-## Usage
+### Claude Desktop
 
-### Connect to Claude Desktop
-
-#### Method 1: Streamable HTTPS/MCP (Recommended)
-
-Install the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote) and update your Claude Desktop configuration:
+Install the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) proxy and add the following to your Claude Desktop configuration:
 
 ```json
 {
@@ -84,12 +97,56 @@ Install the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote) and upd
 }
 ```
 
-For local development:
+For the EU region, swap the URL for `https://mcp.novu.co/?region=eu`.
+
+Restart Claude Desktop — the Novu tools will appear automatically.
+
+### Cursor, Windsurf & other MCP clients
+
+Any client that supports remote MCP servers can connect directly:
+
+- **URL:** `https://mcp.novu.co/` (add `?region=eu` for EU)
+- **Header:** `Authorization: Bearer your-novu-api-key`
+
+For clients that only support stdio transports, use `mcp-remote` as shown in the Claude Desktop example above.
+
+## 📦 Available Tools
+
+| Tool | Description |
+| ---- | ----------- |
+| `get_api_key_status` | Check the current API key status and active region |
+| `get_environments` | List all environments with their details and API keys |
+| `get_notifications` | Fetch events with filtering by channel, template, subscriber, date, and more |
+| `get_notification` | Get a specific notification with detailed execution logs |
+| `find_subscribers` | Search subscribers by email, name, phone, or ID |
+| `get_subscriber_preferences` | Get a subscriber's preferences across all channels and workflows |
+| `update_subscriber_preferences` | Update a subscriber's channel preferences globally or per workflow |
+| `get_workflows` | List all workflows with their basic information |
+| `get_workflow` | Get a workflow's full definition, steps, and payload schema |
+| `trigger_workflow` | Trigger a workflow for a subscriber with a custom payload |
+| `get_integrations` | List configured provider integrations across channels |
+
+## 💻 Local Development
+
+**Prerequisites:** [Node.js](https://nodejs.org/) 20+ and [pnpm](https://pnpm.io/installation).
+
+```bash
+# Clone and install
+git clone https://github.com/novuhq/novu-mcp-server.git
+cd novu-mcp-server
+pnpm install
+
+# Start the local worker
+pnpm dev
+```
+
+The server runs at [http://localhost:8787](http://localhost:8787). Point your MCP client at it the same way you would the hosted version:
+
 ```json
 {
   "mcpServers": {
     "novu": {
-      "command": "npx", 
+      "command": "npx",
       "args": [
         "mcp-remote",
         "http://localhost:8787/",
@@ -101,72 +158,59 @@ For local development:
 }
 ```
 
-#### Method 2: SSE (Deprecated)
+**Scripts:**
 
-```json
-{
-  "mcpServers": {
-    "novu": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://mcp.novu.co/sse",
-        "--header",
-        "Authorization:Bearer your-novu-api-key"
-      ]
-    }
-  }
-}
+- `pnpm dev` — Run the worker locally via Wrangler
+- `pnpm deploy` — Deploy to Cloudflare Workers
+- `pnpm type-check` — Run TypeScript type checking
+- `pnpm lint:fix` — Fix linter issues with Biome
+- `pnpm format` — Format the codebase with Biome
+
+### Project structure
+
+```
+src/
+├── index.ts            # Worker entry — auth extraction and routing
+├── server/NovuMCP.ts   # Durable Object hosting the MCP agent
+├── tools/              # One file per tool group (workflows, subscribers, …)
+├── utils/              # API client, validation, tool factory
+└── types/              # Shared TypeScript types
 ```
 
-Restart Claude Desktop and the Novu tools will be available.
+Add new tools by creating a `register*Tools` function under `src/tools/` and wiring it in `src/server/NovuMCP.ts`.
 
-### Connect to Other MCP Clients
+## 🔒 Security
 
-For other MCP clients that support remote servers:
+- Your API key is passed via the `Authorization` header on every request — it is never stored server-side.
+- All outbound requests to the Novu API are authenticated with the caller's key; the server holds no ambient credentials.
+- Never commit API keys. Use `.dev.vars` for local secrets (already gitignored).
+- Treat your Novu API key like a password — rotate it from the dashboard if you suspect it has been exposed.
 
-#### Streamable HTTPS/MCP (Recommended)
-- **US Region**: `https://mcp.novu.co/` or `https://mcp.novu.co/?region=us`
-- **EU Region**: `https://mcp.novu.co/?region=eu`
-- **Authorization Header**: `Authorization: Bearer your-novu-api-key`
+## 🤝 Contributing
 
-#### SSE (Deprecated)
-- **US Region**: `https://mcp.novu.co/sse` or `https://mcp.novu.co/sse?region=us`
-- **EU Region**: `https://mcp.novu.co/sse?region=eu`
-- **Authorization Header**: `Authorization: Bearer your-novu-api-key`
+1. **Make Changes**
 
-## Available Tools
+   ```bash
+   git checkout -b feat/your-change
+   pnpm dev           # Test locally
+   pnpm type-check    # Verify types
+   git commit -m "feat: your change"
+   git push origin feat/your-change
+   ```
 
-- `get_api_key_status` - Check the current API key status and server region configuration
-- `get_environments` - Get all environments from your Novu application with their details and API keys
-- `get_notifications` - Get notifications/events from Novu with advanced filtering options by channels, templates, emails, subscribers, dates, and more
-- `get_notification` - Get a specific notification by ID with detailed execution logs, status, and delivery information
-- `find_subscribers` - Search for subscribers using various query parameters like email, name, phone number, or subscriber ID
-- `get_subscriber_preferences` - Get subscriber notification preferences for all channels (email, SMS, in-app, push, chat) across all workflows and global settings
-- `update_subscriber_preferences` - Update subscriber notification preferences for specific channels (email, SMS, in-app, push, chat) either globally or for a specific workflow
-- `get_workflows` - Get all available workflows from your Novu application with their basic information and identifiers
-- `get_workflow` - Get detailed information about a specific workflow including its steps, channels, payload structure, and configuration
-- `trigger_workflow` - Trigger a workflow to send notifications to a subscriber with custom payload data
+2. **Open a Pull Request**
+   - Use a descriptive title with `feat:`, `fix:`, `docs:`, or `chore:` prefix
+   - Include a short description of the change and, where relevant, a sample tool call
 
-## Development
+**Guidelines:**
 
-### Local Development
+- Keep tool descriptions concise — they are surfaced verbatim to LLMs
+- Validate inputs with Zod schemas in `src/utils/`
+- Prefer the `ToolFactory` helpers for standard CRUD endpoints
+- Something missing? Open a [GitHub issue](https://github.com/novuhq/novu-mcp-server/issues)
 
-1. Clone this repository
-2. Install dependencies: `pnpm install`
-3. Start the development server: `pnpm start`
-4. The server will be available at `http://localhost:8787`
+**Need help?** Email us at support@novu.co or join the [Discord](https://discord.novu.co).
 
-### Customization
+---
 
-To customize the MCP server:
-- Modify tools in `src/tools/` directories
-- Update server initialization in `src/index.ts`
-- Add new API endpoints or modify existing ones in `src/server/NovuMCP.ts`
-
-## Security Notes
-
-- Keep your Novu API key secure and never commit it to version control
-- The server validates API keys before making requests to Novu
-- All requests include proper error handling and validation
-- Consider implementing rate limiting for production deployments 
+Thank you for contributing! 🙏
