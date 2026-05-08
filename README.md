@@ -58,6 +58,9 @@ https://mcp.novu.co/
 
 Authenticate with a standard bearer token:
 
+The server supports US, EU, and a Local region for pointing at a self-hosted Novu API. Use the region parameter to specify your preferred region:
+
+**US Region** (default if no parameter specified):
 ```
 Authorization: Bearer <your-novu-api-key>
 ```
@@ -70,6 +73,17 @@ The server supports both Novu Cloud regions. Pass the region as a query paramete
 | ------ | ------------------------------- |
 | US (default) | `https://mcp.novu.co/?region=us` |
 | EU     | `https://mcp.novu.co/?region=eu` |
+
+**Local Region** (points the MCP server at a local Novu API running on `http://localhost:3000`):
+```
+# Streamable HTTPS/MCP
+http://localhost:8787/?region=local
+
+# SSE (Deprecated)
+http://localhost:8787/sse?region=local
+```
+
+**Note**: If no region parameter is provided, the server defaults to the US region (`api.novu.co`). For EU region, it connects to `eu.api.novu.co`. The `local` region targets `http://localhost:3000` and is intended for development against a self-hosted Novu API — it only works when this MCP server is run locally via `pnpm start` (Wrangler's default local mode), since Cloudflare's edge runtime cannot reach your machine's localhost.
 
 If no `region` is provided, the server defaults to US (`api.novu.co`). The EU region proxies to `eu.api.novu.co`.
 
@@ -158,7 +172,24 @@ The server runs at [http://localhost:8787](http://localhost:8787). Point your MC
 }
 ```
 
-**Scripts:**
+For local development against a **self-hosted Novu API** on `http://localhost:3000`, add `?region=local`:
+```json
+{
+  "mcpServers": {
+    "novu-local": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:8787/?region=local",
+        "--header",
+        "Authorization:Bearer your-local-novu-api-key"
+      ]
+    }
+  }
+}
+```
+
+#### Method 2: SSE (Deprecated)
 
 - `pnpm dev` — Run the worker locally via Wrangler
 - `pnpm deploy` — Deploy to Cloudflare Workers

@@ -45,7 +45,7 @@ export class NovuMCP extends McpAgent {
 		if (currentRequestUrl) {
 			const url = new URL(currentRequestUrl);
 			const urlRegion = url.searchParams.get('novu_region');
-			if (urlRegion === 'eu' || urlRegion === 'us') {
+			if (urlRegion === 'eu' || urlRegion === 'us' || urlRegion === 'local') {
 				return urlRegion;
 			}
 		}

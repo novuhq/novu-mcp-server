@@ -5,7 +5,10 @@ export class NovuApiUtils {
 	 * Get the base URL based on server region
 	 */
 	static getBaseUrl(serverRegion: ServerRegion): string {
-		return serverRegion === 'eu' ? 'https://eu.api.novu.co' : 'https://api.novu.co';
+		if (serverRegion === 'local') return 'http://localhost:3000';
+		if (serverRegion === 'eu') return 'https://eu.api.novu.co';
+
+		return 'https://api.novu.co';
 	}
 
 	/**
