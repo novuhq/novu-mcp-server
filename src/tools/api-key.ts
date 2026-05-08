@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ServerRegion } from '../types/index';
 
 export function registerApiKeyTools(
@@ -15,7 +15,12 @@ export function registerApiKeyTools(
 			const apiKey = getApiKey();
 			const serverRegion = getServerRegion();
 			const hasApiKey = apiKey !== null;
-			const serverInfo = `Server: ${serverRegion === 'eu' ? 'EU (eu.api.novu.co)' : 'US (api.novu.co)'}`;
+			const serverLabels: Record<ServerRegion, string> = {
+				eu: 'EU (eu.api.novu.co)',
+				us: 'US (api.novu.co)',
+				local: 'Local (http://localhost:3000)'
+			};
+			const serverInfo = `Server: ${serverLabels[serverRegion]}`;
 			const message = hasApiKey 
 				? `API Key is loaded successfully. Length: ${apiKey!.length} characters\n${serverInfo}`
 				: `No API Key is loaded. Provide your Novu API key in the Authorization header:\nAuthorization: Bearer your-key\n${serverInfo}`;

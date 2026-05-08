@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ValidationUtils } from './validation';
 import { NovuApiUtils } from './api';
@@ -123,14 +123,14 @@ export class ToolFactory {
 		successMessage: string,
 		schema?: z.ZodSchema
 	) {
-		this.createTool(server, getApiKey, getServerRegion, {
+		ToolFactory.createTool(server, getApiKey, getServerRegion, {
 			name,
 			description,
 			schema: schema || z.object({
 				idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
 			}),
 			handler: async (input, context) => {
-				return this.makeApiRequest(context, {
+				return ToolFactory.makeApiRequest(context, {
 					method: 'GET',
 					endpoint,
 					successMessage
@@ -153,7 +153,7 @@ export class ToolFactory {
 		idParamName: string = "id",
 		idDescription: string = "The ID to retrieve"
 	) {
-		this.createTool(server, getApiKey, getServerRegion, {
+		ToolFactory.createTool(server, getApiKey, getServerRegion, {
 			name,
 			description,
 			schema: z.object({
@@ -163,7 +163,7 @@ export class ToolFactory {
 			handler: async (input, context) => {
 				const idValue = (input as any)[idParamName] as string;
 				const endpoint = endpointTemplate.replace('{id}', idValue);
-				return this.makeApiRequest(context, {
+				return ToolFactory.makeApiRequest(context, {
 					method: 'GET',
 					endpoint,
 					successMessage,
@@ -187,7 +187,7 @@ export class ToolFactory {
 		idParamName: string = "id",
 		idDescription: string = "The ID to delete"
 	) {
-		this.createTool(server, getApiKey, getServerRegion, {
+		ToolFactory.createTool(server, getApiKey, getServerRegion, {
 			name,
 			description,
 			schema: z.object({
@@ -197,7 +197,7 @@ export class ToolFactory {
 			handler: async (input, context) => {
 				const idValue = (input as any)[idParamName] as string;
 				const endpoint = endpointTemplate.replace('{id}', idValue);
-				return this.makeApiRequest(context, {
+				return ToolFactory.makeApiRequest(context, {
 					method: 'DELETE',
 					endpoint,
 					successMessage,
