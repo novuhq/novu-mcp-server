@@ -23,9 +23,7 @@ function createSkipValueSchema() {
 						'Path to the variable value. Prefixes: "payload." for trigger data, "subscriber." for subscriber data, "steps.<stepId>." for previous step output',
 					),
 			})
-			.describe(
-				"Variable reference to access payload, subscriber, or previous step data",
-			),
+			.describe("Variable reference to access payload, subscriber, or previous step data"),
 	]);
 }
 

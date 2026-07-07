@@ -1,48 +1,50 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { ValidationUtils } from '../utils/validation';
-import { NovuApiUtils } from '../utils/api';
-import type { ServerRegion } from '../types/index';
-import { describe } from "node:test";
+import { NovuApiUtils } from "../utils/api";
+import { ValidationUtils } from "../utils/validation";
 
 export function registerEnvironmentTools(
-	server: McpServer, 
-	getApiKey: () => string | null, 
-	getServerRegion: () => ServerRegion
+	server: McpServer,
+	getToken: () => string | null,
+	getApiUrl: () => string,
 ) {
 	// Get all environments from Novu API
 	server.tool(
 		"get_environments",
-		"Get all environments from your Novu application with their details and API keys",
+		"Get all environments from your Novu application with their details and API keys. Use an environment's _id as the environmentId parameter on other tools to run them against that environment (e.g. Production instead of the default Development).",
 		{
-			idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
+			idempotencyKey: z
+				.string()
+				.optional()
+				.describe("Optional idempotency key for the request"),
 		},
 		async ({ idempotencyKey }) => {
 			// Validate API key first
-			const apiKeyError = ValidationUtils.validateApiKey(getApiKey());
-			if (apiKeyError) {
-				return apiKeyError;
+			const authError = ValidationUtils.validateToken(getToken());
+			if (authError) {
+				return authError;
 			}
 
 			try {
 				console.log("Fetching environments from Novu API...");
-				
-				const response = await fetch(`${NovuApiUtils.getBaseUrl(getServerRegion())}/v1/environments`, {
+
+				const response = await fetch(`${getApiUrl()}/v1/environments`, {
+					headers: NovuApiUtils.prepareHeaders(getToken()!, { idempotencyKey }),
 					method: "GET",
-					headers: NovuApiUtils.prepareHeaders(getApiKey()!, idempotencyKey)
 				});
 
 				return await NovuApiUtils.handleApiResponse(response, "fetched environments");
-
 			} catch (error) {
 				console.error("Error fetching environments:", error);
 				return {
-					content: [{ 
-						type: "text" as const, 
-						text: `Error: Failed to fetch environments. ${error instanceof Error ? error.message : 'Unknown error'}` 
-					}],
+					content: [
+						{
+							text: `Error: Failed to fetch environments. ${error instanceof Error ? error.message : "Unknown error"}`,
+							type: "text" as const,
+						},
+					],
 				};
 			}
-		}
+		},
 	);
-} 
+}

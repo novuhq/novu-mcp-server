@@ -1,21 +1,24 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { ValidationUtils } from './validation';
-import { NovuApiUtils } from './api';
-import type { ServerRegion, ApiResponse, TriggerWorkflowRequest } from '../types';
+import type { ApiResponse, TriggerWorkflowRequest } from "../types";
+import { NovuApiUtils } from "./api";
+import { ValidationUtils } from "./validation";
+
+export interface ToolContext {
+	token: string;
+	apiUrl: string;
+	environmentId?: string;
+}
 
 interface ToolConfig<T extends z.ZodSchema> {
 	name: string;
 	description: string;
 	schema: T;
-	handler: (
-		input: z.infer<T>, 
-		context: { apiKey: string; serverRegion: ServerRegion }
-	) => Promise<ApiResponse>;
+	handler: (input: z.infer<T>, context: ToolContext) => Promise<ApiResponse>;
 }
 
 interface ApiRequestConfig {
-	method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+	method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 	endpoint: string;
 	body?: any;
 	successMessage: string;
@@ -23,45 +26,68 @@ interface ApiRequestConfig {
 	customHeaders?: Record<string, string>;
 }
 
+/**
+ * Optional environment selector exposed on every tool. Forwarded to the Novu
+ * API as the `Novu-Environment-Id` header for OAuth sessions only — they are
+ * organization-bound and default to the Development environment. Legacy API
+ * keys are already bound to a single environment, so the header is never sent
+ * for them (see `NovuApiUtils.prepareHeaders`).
+ */
+export const environmentIdSchema = z
+	.string()
+	.optional()
+	.describe(
+		"Optional Novu environment ID (_id from get_environments) to run this request against. Only applies to OAuth sessions, which default to the Development environment — pass a different environment ID to target it (e.g. Production). Ignored for environment-bound API keys.",
+	);
+
 export class ToolFactory {
 	/**
 	 * Create a standardized MCP tool with common error handling and validation
 	 */
 	static createTool<T extends z.ZodSchema>(
 		server: McpServer,
-		getApiKey: () => string | null,
-		getServerRegion: () => ServerRegion,
-		config: ToolConfig<T>
+		getToken: () => string | null,
+		getApiUrl: () => string,
+		config: ToolConfig<T>,
 	) {
 		// Extract the shape from the schema if it's a ZodObject, otherwise use the schema itself
-		const schema = 'shape' in config.schema ? (config.schema as any).shape : config.schema;
-		
+		const schema = "shape" in config.schema ? (config.schema as any).shape : config.schema;
+
+		// Every factory tool accepts an optional environment selector; it is
+		// lifted out of the input into the request context (never sent in bodies).
+		const schemaWithEnvironment = { ...schema, environmentId: environmentIdSchema };
+
 		server.tool(
 			config.name,
 			config.description,
-			schema,
-			async (input: z.infer<T>) => {
+			schemaWithEnvironment,
+			async (rawInput: z.infer<T> & { environmentId?: string }) => {
 				// Validate API key first
-				const apiKeyError = ValidationUtils.validateApiKey(getApiKey());
-				if (apiKeyError) {
-					return apiKeyError;
+				const authError = ValidationUtils.validateToken(getToken());
+				if (authError) {
+					return authError;
 				}
 
+				const { environmentId, ...input } = rawInput as Record<string, any>;
+
 				try {
-					return await config.handler(input, {
-						apiKey: getApiKey()!,
-						serverRegion: getServerRegion()
+					return await config.handler(input as z.infer<T>, {
+						apiUrl: getApiUrl(),
+						environmentId,
+						token: getToken()!,
 					});
 				} catch (error) {
 					console.error(`Error in ${config.name}:`, error);
 					return {
-						content: [{ 
-							type: "text" as const, 
-							text: `Error: Failed to execute ${config.name}. ${error instanceof Error ? error.message : 'Unknown error'}` 
-						}],
+						content: [
+							{
+								text: `Error: Failed to execute ${config.name}. ${error instanceof Error ? error.message : "Unknown error"}`,
+								type: "text" as const,
+							},
+						],
 					};
 				}
-			}
+			},
 		);
 	}
 
@@ -69,44 +95,51 @@ export class ToolFactory {
 	 * Create a simple API request handler with standardized error handling
 	 */
 	static async makeApiRequest(
-		context: { apiKey: string; serverRegion: ServerRegion },
+		context: ToolContext,
 		requestConfig: ApiRequestConfig,
-		idempotencyKey?: string
+		idempotencyKey?: string,
 	): Promise<ApiResponse> {
-		const url = `${NovuApiUtils.getBaseUrl(context.serverRegion)}${requestConfig.endpoint}`;
-		
-		console.log(`Making ${requestConfig.method} request to ${requestConfig.endpoint}${requestConfig.identifier ? ` for ${requestConfig.identifier}` : ''}`);
+		const url = `${context.apiUrl}${requestConfig.endpoint}`;
+
+		console.log(
+			`Making ${requestConfig.method} request to ${requestConfig.endpoint}${requestConfig.identifier ? ` for ${requestConfig.identifier}` : ""}`,
+		);
 
 		const headers = {
-			...NovuApiUtils.prepareHeaders(context.apiKey, idempotencyKey),
-			...requestConfig.customHeaders
+			...NovuApiUtils.prepareHeaders(context.token, {
+				environmentId: context.environmentId,
+				idempotencyKey,
+			}),
+			...requestConfig.customHeaders,
 		};
 
 		const response = await fetch(url, {
-			method: requestConfig.method,
 			headers,
-			...(requestConfig.body && { body: JSON.stringify(requestConfig.body) })
+			method: requestConfig.method,
+			...(requestConfig.body && { body: JSON.stringify(requestConfig.body) }),
 		});
 
 		// Handle special case for DELETE operations that return 204
-		if (requestConfig.method === 'DELETE' && response.status === 204) {
-			const message = requestConfig.identifier 
+		if (requestConfig.method === "DELETE" && response.status === 204) {
+			const message = requestConfig.identifier
 				? `Successfully ${requestConfig.successMessage} ${requestConfig.identifier}`
 				: `Successfully ${requestConfig.successMessage}`;
-			
+
 			console.log(message);
 			return {
-				content: [{ 
-					type: "text" as const, 
-					text: message
-				}],
+				content: [
+					{
+						text: message,
+						type: "text" as const,
+					},
+				],
 			};
 		}
 
 		return await NovuApiUtils.handleApiResponse(
-			response, 
-			requestConfig.successMessage, 
-			requestConfig.identifier
+			response,
+			requestConfig.successMessage,
+			requestConfig.identifier,
 		);
 	}
 
@@ -115,27 +148,36 @@ export class ToolFactory {
 	 */
 	static createGetTool(
 		server: McpServer,
-		getApiKey: () => string | null,
-		getServerRegion: () => ServerRegion,
+		getToken: () => string | null,
+		getApiUrl: () => string,
 		name: string,
 		description: string,
 		endpoint: string,
 		successMessage: string,
-		schema?: z.ZodSchema
+		schema?: z.ZodSchema,
 	) {
-		ToolFactory.createTool(server, getApiKey, getServerRegion, {
-			name,
+		ToolFactory.createTool(server, getToken, getApiUrl, {
 			description,
-			schema: schema || z.object({
-				idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
-			}),
 			handler: async (input, context) => {
-				return ToolFactory.makeApiRequest(context, {
-					method: 'GET',
-					endpoint,
-					successMessage
-				}, input.idempotencyKey);
-			}
+				return ToolFactory.makeApiRequest(
+					context,
+					{
+						endpoint,
+						method: "GET",
+						successMessage,
+					},
+					input.idempotencyKey,
+				);
+			},
+			name,
+			schema:
+				schema ||
+				z.object({
+					idempotencyKey: z
+						.string()
+						.optional()
+						.describe("Optional idempotency key for the request"),
+				}),
 		});
 	}
 
@@ -144,32 +186,39 @@ export class ToolFactory {
 	 */
 	static createGetByIdTool(
 		server: McpServer,
-		getApiKey: () => string | null,
-		getServerRegion: () => ServerRegion,
+		getToken: () => string | null,
+		getApiUrl: () => string,
 		name: string,
 		description: string,
 		endpointTemplate: string, // e.g., "/v2/workflows/{id}"
 		successMessage: string,
-		idParamName: string = "id",
-		idDescription: string = "The ID to retrieve"
+		idParamName = "id",
+		idDescription = "The ID to retrieve",
 	) {
-		ToolFactory.createTool(server, getApiKey, getServerRegion, {
-			name,
+		ToolFactory.createTool(server, getToken, getApiUrl, {
 			description,
-			schema: z.object({
-				[idParamName]: z.string().describe(idDescription),
-				idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
-			}),
 			handler: async (input, context) => {
 				const idValue = (input as any)[idParamName] as string;
-				const endpoint = endpointTemplate.replace('{id}', idValue);
-				return ToolFactory.makeApiRequest(context, {
-					method: 'GET',
-					endpoint,
-					successMessage,
-					identifier: idValue
-				}, (input as any).idempotencyKey);
-			}
+				const endpoint = endpointTemplate.replace("{id}", idValue);
+				return ToolFactory.makeApiRequest(
+					context,
+					{
+						endpoint,
+						identifier: idValue,
+						method: "GET",
+						successMessage,
+					},
+					(input as any).idempotencyKey,
+				);
+			},
+			name,
+			schema: z.object({
+				[idParamName]: z.string().describe(idDescription),
+				idempotencyKey: z
+					.string()
+					.optional()
+					.describe("Optional idempotency key for the request"),
+			}),
 		});
 	}
 
@@ -178,32 +227,39 @@ export class ToolFactory {
 	 */
 	static createDeleteTool(
 		server: McpServer,
-		getApiKey: () => string | null,
-		getServerRegion: () => ServerRegion,
+		getToken: () => string | null,
+		getApiUrl: () => string,
 		name: string,
 		description: string,
 		endpointTemplate: string, // e.g., "/v2/workflows/{id}"
 		successMessage: string,
-		idParamName: string = "id",
-		idDescription: string = "The ID to delete"
+		idParamName = "id",
+		idDescription = "The ID to delete",
 	) {
-		ToolFactory.createTool(server, getApiKey, getServerRegion, {
-			name,
+		ToolFactory.createTool(server, getToken, getApiUrl, {
 			description,
-			schema: z.object({
-				[idParamName]: z.string().describe(idDescription),
-				idempotencyKey: z.string().optional().describe("Optional idempotency key for the request")
-			}),
 			handler: async (input, context) => {
 				const idValue = (input as any)[idParamName] as string;
-				const endpoint = endpointTemplate.replace('{id}', idValue);
-				return ToolFactory.makeApiRequest(context, {
-					method: 'DELETE',
-					endpoint,
-					successMessage,
-					identifier: idValue
-				}, (input as any).idempotencyKey);
-			}
+				const endpoint = endpointTemplate.replace("{id}", idValue);
+				return ToolFactory.makeApiRequest(
+					context,
+					{
+						endpoint,
+						identifier: idValue,
+						method: "DELETE",
+						successMessage,
+					},
+					(input as any).idempotencyKey,
+				);
+			},
+			name,
+			schema: z.object({
+				[idParamName]: z.string().describe(idDescription),
+				idempotencyKey: z
+					.string()
+					.optional()
+					.describe("Optional idempotency key for the request"),
+			}),
 		});
 	}
 
@@ -211,46 +267,63 @@ export class ToolFactory {
 	 * Special handler for trigger workflow which has custom logic
 	 */
 	static async handleTriggerWorkflow(
-		input: { workflowName: string; subscriberId: string; payload: Record<string, any>; overrides?: Record<string, { integrationIdentifier: string }>; idempotencyKey?: string },
-		context: { apiKey: string; serverRegion: ServerRegion }
+		input: {
+			workflowName: string;
+			subscriberId: string;
+			payload: Record<string, any>;
+			overrides?: Record<string, { integrationIdentifier: string }>;
+			idempotencyKey?: string;
+		},
+		context: ToolContext,
 	): Promise<ApiResponse> {
-		console.log(`Triggering workflow "${input.workflowName}" for subscriber "${input.subscriberId}"`);
-		
+		console.log(
+			`Triggering workflow "${input.workflowName}" for subscriber "${input.subscriberId}"`,
+		);
+
 		const requestBody: TriggerWorkflowRequest = {
 			name: input.workflowName,
-			to: [{ subscriberId: input.subscriberId }],
 			payload: input.payload,
+			to: [{ subscriberId: input.subscriberId }],
 			...(input.overrides && { overrides: input.overrides }),
 		};
 
-		const response = await fetch(`${NovuApiUtils.getBaseUrl(context.serverRegion)}/v1/events/trigger`, {
-			method: "POST",
+		const response = await fetch(`${context.apiUrl}/v1/events/trigger`, {
+			body: JSON.stringify(requestBody),
 			headers: {
-				...NovuApiUtils.prepareHeaders(context.apiKey, input.idempotencyKey),
-				"Content-Type": "application/json"
+				...NovuApiUtils.prepareHeaders(context.token, {
+					environmentId: context.environmentId,
+					idempotencyKey: input.idempotencyKey,
+				}),
+				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(requestBody)
+			method: "POST",
 		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
 			console.error("Novu API Error:", response.status, errorText);
 			return {
-				content: [{ 
-					type: "text" as const, 
-					text: `Error: Failed to trigger workflow "${input.workflowName}". Status: ${response.status}, Message: ${errorText}` 
-				}],
+				content: [
+					{
+						text: `Error: Failed to trigger workflow "${input.workflowName}". Status: ${response.status}, Message: ${errorText}`,
+						type: "text" as const,
+					},
+				],
 			};
 		}
 
 		const data = await response.json();
-		console.log(`Successfully triggered workflow "${input.workflowName}" for subscriber "${input.subscriberId}"`);
-		
+		console.log(
+			`Successfully triggered workflow "${input.workflowName}" for subscriber "${input.subscriberId}"`,
+		);
+
 		return {
-			content: [{ 
-				type: "text" as const, 
-				text: `Successfully triggered workflow "${input.workflowName}" for subscriber "${input.subscriberId}":\n\n${JSON.stringify(data, null, 2)}` 
-			}],
+			content: [
+				{
+					text: `Successfully triggered workflow "${input.workflowName}" for subscriber "${input.subscriberId}":\n\n${JSON.stringify(data, null, 2)}`,
+					type: "text" as const,
+				},
+			],
 		};
 	}
-} 
+}
