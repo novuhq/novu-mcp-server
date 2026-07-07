@@ -32,17 +32,6 @@ import { workflowStepSchema } from "./step-schemas";
 // --- Re-exports (backward compatibility) ---------------------------------
 
 export { createSkipConditionSchema } from "./skip-schemas";
-export {
-	delayTypeSchema,
-	digestTypeSchema,
-	editorTypeSchema,
-	httpMethodSchema,
-	redirectTargetSchema,
-	stepTypeSchema,
-	throttleTypeSchema,
-	timeUnitSchema,
-	workflowStepSchema,
-} from "./step-schemas";
 export type {
 	DelayType,
 	DigestType,
@@ -53,6 +42,17 @@ export type {
 	ThrottleType,
 	TimeUnit,
 	WorkflowStep,
+} from "./step-schemas";
+export {
+	delayTypeSchema,
+	digestTypeSchema,
+	editorTypeSchema,
+	httpMethodSchema,
+	redirectTargetSchema,
+	stepTypeSchema,
+	throttleTypeSchema,
+	timeUnitSchema,
+	workflowStepSchema,
 } from "./step-schemas";
 
 // --- Constants ------------------------------------------------------------
@@ -80,53 +80,39 @@ export const workflowSourceSchema = z.enum([
 	"dashboard",
 ]);
 
-export const workflowOriginSchema = z.enum([
-	"novu-cloud",
-	"novu-cloud-v1",
-	"external",
-]);
+export const workflowOriginSchema = z.enum(["novu-cloud", "novu-cloud-v1", "external"]);
 
 // --- Preferences ----------------------------------------------------------
 
 export const channelPreferencesSchema = z.object({
+	chat: z.boolean().optional().describe("Chat channel preference."),
 	email: z.boolean().optional().describe("Email channel preference."),
-	sms: z.boolean().optional().describe("SMS channel preference."),
 	in_app: z.boolean().optional().describe("In-app channel preference."),
 	push: z.boolean().optional().describe("Push channel preference."),
-	chat: z.boolean().optional().describe("Chat channel preference."),
+	sms: z.boolean().optional().describe("SMS channel preference."),
 });
 
 export const preferencesObjectSchema = z.object({
+	channels: channelPreferencesSchema.optional().describe("Channel preferences."),
 	enabled: z.boolean().optional().describe("Whether preferences are enabled."),
-	channels: channelPreferencesSchema
-		.optional()
-		.describe("Channel preferences."),
 });
 
 export const workflowPreferencesSchema = z.object({
-	user: preferencesObjectSchema
-		.optional()
-		.describe("User workflow preferences."),
-	workflow: preferencesObjectSchema
-		.optional()
-		.describe("Workflow-specific preferences."),
+	user: preferencesObjectSchema.optional().describe("User workflow preferences."),
+	workflow: preferencesObjectSchema.optional().describe("Workflow-specific preferences."),
 });
 
 // --- Payload schema (flat-descriptor alternative) -------------------------
 
 function createPayloadPropertyBaseSchema() {
 	return z.object({
-		name: z
-			.string()
-			.describe(
-				'Property name. Use dot notation for nested paths, e.g. "order.total".',
-			),
 		isRequired: z
 			.boolean()
 			.optional()
-			.describe(
-				"Whether the property is required in the payload (default: true).",
-			),
+			.describe("Whether the property is required in the payload (default: true)."),
+		name: z
+			.string()
+			.describe('Property name. Use dot notation for nested paths, e.g. "order.total".'),
 	});
 }
 
@@ -136,19 +122,15 @@ export const payloadPropertySchema = z.union([
 	createPayloadPropertyBaseSchema().extend({ type: z.literal("integer") }),
 	createPayloadPropertyBaseSchema().extend({ type: z.literal("boolean") }),
 	createPayloadPropertyBaseSchema().extend({
-		type: z.literal("enum"),
 		enumValues: z
 			.array(z.string())
 			.min(1)
 			.describe(
 				"The complete set of allowed values. Only use enum when the user explicitly defines a fixed list.",
 			),
+		type: z.literal("enum"),
 	}),
 	createPayloadPropertyBaseSchema().extend({
-		type: z.literal("array"),
-		arrayItemsType: z
-			.enum(["string", "number", "integer", "boolean", "object"])
-			.describe("Type of each array element."),
 		arrayItemProperties: z
 			.array(
 				z.object({
@@ -164,6 +146,10 @@ export const payloadPropertySchema = z.union([
 			.describe(
 				'Properties of each object in the array. Required when arrayItemsType is "object", omit for scalar arrays.',
 			),
+		arrayItemsType: z
+			.enum(["string", "number", "integer", "boolean", "object"])
+			.describe("Type of each array element."),
+		type: z.literal("array"),
 	}),
 	createPayloadPropertyBaseSchema().extend({ type: z.literal("object") }),
 ]);
@@ -171,18 +157,53 @@ export const payloadPropertySchema = z.union([
 // --- Workflow input schemas ----------------------------------------------
 
 export const baseWorkflowInputSchema = z.object({
-	name: z
-		.string()
-		.max(MAX_NAME_LENGTH)
+	active: z.boolean().optional().describe("Whether the workflow is active."),
+	critical: z
+		.boolean()
+		.optional()
 		.describe(
-			`Name of the workflow (non-empty, max ${MAX_NAME_LENGTH} characters).`,
+			"When true, deliver messages regardless of user preferences. Use for security or account-blocking notifications.",
 		),
 	description: z
 		.string()
 		.max(MAX_DESCRIPTION_LENGTH)
 		.optional()
+		.describe(`Description of the workflow (max ${MAX_DESCRIPTION_LENGTH} characters).`),
+	idempotencyKey: z.string().optional().describe("Optional idempotency key for the request."),
+	isTranslationEnabled: z
+		.boolean()
+		.optional()
+		.describe("Enable or disable translations for this workflow."),
+	name: z
+		.string()
+		.max(MAX_NAME_LENGTH)
+		.describe(`Name of the workflow (non-empty, max ${MAX_NAME_LENGTH} characters).`),
+	payloadProperties: z
+		.array(payloadPropertySchema)
+		.optional()
 		.describe(
-			`Description of the workflow (max ${MAX_DESCRIPTION_LENGTH} characters).`,
+			"Flat list of payload property descriptors. LLM-friendly alternative to `payloadSchema`. Tooling converts these to JSON Schema before sending to Novu.",
+		),
+	payloadSchema: z
+		.object({})
+		.passthrough()
+		.optional()
+		.describe(
+			"Raw JSON Schema for the workflow payload. Use this OR `payloadProperties` (flat descriptor list) — not both.",
+		),
+	preferences: workflowPreferencesSchema
+		.optional()
+		.describe("Workflow preferences configuration."),
+	severity: severitySchema
+		.optional()
+		.describe(
+			"Workflow severity: 'high' for critical alerts, 'medium' for important, 'low' for informational, 'none' for unspecified.",
+		),
+	steps: z
+		.array(workflowStepSchema)
+		.min(1)
+		.describe(
+			"Steps of the workflow — at least one step required. Each step is discriminated by `type`. Always use {{payload.variableName}} for dynamic content (e.g. {{payload.userName}}, {{payload.orderId}}).",
 		),
 	tags: z
 		.array(
@@ -193,149 +214,81 @@ export const baseWorkflowInputSchema = z.object({
 		)
 		.max(MAX_TAG_ELEMENTS)
 		.optional()
-		.describe(
-			`Tags associated with the workflow (max ${MAX_TAG_ELEMENTS} tags).`,
-		),
-	severity: severitySchema
-		.optional()
-		.describe(
-			"Workflow severity: 'high' for critical alerts, 'medium' for important, 'low' for informational, 'none' for unspecified.",
-		),
-	critical: z
-		.boolean()
-		.optional()
-		.describe(
-			"When true, deliver messages regardless of user preferences. Use for security or account-blocking notifications.",
-		),
-	active: z.boolean().optional().describe("Whether the workflow is active."),
+		.describe(`Tags associated with the workflow (max ${MAX_TAG_ELEMENTS} tags).`),
 	validatePayload: z
 		.boolean()
 		.optional()
 		.describe("Enable or disable payload schema validation."),
-	payloadSchema: z
-		.object({})
-		.passthrough()
-		.optional()
-		.describe(
-			"Raw JSON Schema for the workflow payload. Use this OR `payloadProperties` (flat descriptor list) — not both.",
-		),
-	payloadProperties: z
-		.array(payloadPropertySchema)
-		.optional()
-		.describe(
-			"Flat list of payload property descriptors. LLM-friendly alternative to `payloadSchema`. Tooling converts these to JSON Schema before sending to Novu.",
-		),
-	isTranslationEnabled: z
-		.boolean()
-		.optional()
-		.describe("Enable or disable translations for this workflow."),
-	steps: z
-		.array(workflowStepSchema)
-		.min(1)
-		.describe(
-			"Steps of the workflow — at least one step required. Each step is discriminated by `type`. Always use {{payload.variableName}} for dynamic content (e.g. {{payload.userName}}, {{payload.orderId}}).",
-		),
-	preferences: workflowPreferencesSchema
-		.optional()
-		.describe("Workflow preferences configuration."),
-	idempotencyKey: z
-		.string()
-		.optional()
-		.describe("Optional idempotency key for the request."),
 });
 
 // Create workflow specific schema
 export const createWorkflowInputSchema = baseWorkflowInputSchema.extend({
+	__source: workflowSourceSchema.optional().describe("Source of workflow creation."),
 	workflowId: z.string().describe("Unique identifier for the workflow."),
-	__source: workflowSourceSchema
-		.optional()
-		.describe("Source of workflow creation."),
 });
 
 // Update workflow specific schema
 export const updateWorkflowInputSchema = baseWorkflowInputSchema.extend({
-	workflowId: z
-		.string()
-		.describe("The unique identifier of the workflow to update."),
 	origin: workflowOriginSchema.describe("Origin of the workflow."),
+	workflowId: z.string().describe("The unique identifier of the workflow to update."),
 });
 
 // --- Trigger / cancel / delete -------------------------------------------
 
 export const idempotencyKeySchema = z.object({
-	idempotencyKey: z
-		.string()
-		.optional()
-		.describe("Optional idempotency key for the request."),
+	idempotencyKey: z.string().optional().describe("Optional idempotency key for the request."),
 });
 
 export const workflowIdInputSchema = z.object({
-	workflowId: z
-		.string()
-		.describe("The workflow ID to retrieve (obtained from get_workflows)."),
-	idempotencyKey: z
-		.string()
-		.optional()
-		.describe("Optional idempotency key for the request."),
+	idempotencyKey: z.string().optional().describe("Optional idempotency key for the request."),
+	workflowId: z.string().describe("The workflow ID to retrieve (obtained from get_workflows)."),
 });
 
 export const triggerWorkflowInputSchema = z.object({
-	workflowName: z
-		.string()
-		.describe(
-			"The workflow name/identifier to trigger (obtained from get_workflows).",
-		),
-	subscriberId: z
-		.string()
-		.describe(
-			"The subscriber ID to send the notification to (obtained from find_subscribers).",
-		),
-	payload: z
-		.record(z.any())
-		.describe(
-			"The payload data for the workflow (structure obtained from get_workflow).",
-		),
+	idempotencyKey: z.string().optional().describe("Optional idempotency key for the request."),
 	overrides: z
 		.object({
-			email: z
-				.object({ integrationIdentifier: z.string() })
-				.optional()
-				.describe("Override the email integration used for this trigger."),
-			sms: z
-				.object({ integrationIdentifier: z.string() })
-				.optional()
-				.describe("Override the SMS integration used for this trigger."),
-			push: z
-				.object({ integrationIdentifier: z.string() })
-				.optional()
-				.describe("Override the push integration used for this trigger."),
 			chat: z
 				.object({ integrationIdentifier: z.string() })
 				.optional()
 				.describe("Override the chat integration used for this trigger."),
+			email: z
+				.object({ integrationIdentifier: z.string() })
+				.optional()
+				.describe("Override the email integration used for this trigger."),
 			in_app: z
 				.object({ integrationIdentifier: z.string() })
 				.optional()
 				.describe("Override the in-app integration used for this trigger."),
+			push: z
+				.object({ integrationIdentifier: z.string() })
+				.optional()
+				.describe("Override the push integration used for this trigger."),
+			sms: z
+				.object({ integrationIdentifier: z.string() })
+				.optional()
+				.describe("Override the SMS integration used for this trigger."),
 		})
 		.optional()
 		.describe(
 			"Channel-specific overrides to select which integration to use. Use get_integrations to find available integration identifiers.",
 		),
-	idempotencyKey: z
+	payload: z
+		.record(z.any())
+		.describe("The payload data for the workflow (structure obtained from get_workflow)."),
+	subscriberId: z
 		.string()
-		.optional()
-		.describe("Optional idempotency key for the request."),
+		.describe(
+			"The subscriber ID to send the notification to (obtained from find_subscribers).",
+		),
+	workflowName: z
+		.string()
+		.describe("The workflow name/identifier to trigger (obtained from get_workflows)."),
 });
 
 export const deleteWorkflowInputSchema = z.object({
-	workflowId: z
-		.string()
-		.describe("The unique identifier of the workflow to delete."),
-	idempotencyKey: z
-		.string()
-		.optional()
-		.describe("Optional idempotency key for the request."),
+	idempotencyKey: z.string().optional().describe("Optional idempotency key for the request."),
+	workflowId: z.string().describe("The unique identifier of the workflow to delete."),
 });
 
 // --- Helpers -------------------------------------------------------------
@@ -367,9 +320,9 @@ export function payloadPropertiesToJsonSchema(
 	properties: z.infer<typeof payloadPropertySchema>[],
 ): Record<string, unknown> {
 	const root: JsonSchemaObjectNode = {
-		type: "object",
 		properties: {},
 		required: [],
+		type: "object",
 	};
 
 	for (const prop of properties) {
@@ -384,7 +337,7 @@ export function payloadPropertiesToJsonSchema(
 			const nextNode: JsonSchemaObjectNode =
 				existing && existing.type === "object"
 					? existing
-					: { type: "object", properties: {}, required: [] };
+					: { properties: {}, required: [], type: "object" };
 
 			cursor.properties[segment] = nextNode;
 			cursor = nextNode;
@@ -409,9 +362,9 @@ function propertyDescriptorToJsonSchemaNode(
 		case "boolean":
 			return { type: prop.type };
 		case "enum":
-			return { type: "string", enum: prop.enumValues };
+			return { enum: prop.enumValues, type: "string" };
 		case "object":
-			return { type: "object", properties: {}, required: [] };
+			return { properties: {}, required: [], type: "object" };
 		case "array": {
 			if (prop.arrayItemsType === "object") {
 				const itemProperties: Record<string, JsonSchemaNode> = {};
@@ -422,12 +375,12 @@ function propertyDescriptorToJsonSchemaNode(
 				}
 
 				return {
+					items: { properties: itemProperties, required, type: "object" },
 					type: "array",
-					items: { type: "object", properties: itemProperties, required },
 				};
 			}
 
-			return { type: "array", items: { type: prop.arrayItemsType } };
+			return { items: { type: prop.arrayItemsType }, type: "array" };
 		}
 		default: {
 			const exhaustive: never = prop;

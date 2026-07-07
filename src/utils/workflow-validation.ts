@@ -23,10 +23,7 @@ export class WorkflowValidationUtils {
 		context: ValidationContext = {},
 	): ApiResponse | null {
 		for (const step of steps) {
-			const stepError = WorkflowValidationUtils.validateSingleStep(
-				step,
-				context,
-			);
+			const stepError = WorkflowValidationUtils.validateSingleStep(step, context);
 			if (stepError) return stepError;
 		}
 
@@ -90,10 +87,10 @@ export class WorkflowValidationUtils {
 		if (!digestKey) return null;
 
 		return WorkflowValidationUtils.validateVariableReference({
-			stepName: step.name,
 			fieldLabel: "digestKey",
-			variablePath: digestKey,
 			payloadSchema: context.payloadSchema,
+			stepName: step.name,
+			variablePath: digestKey,
 		});
 	}
 
@@ -107,10 +104,10 @@ export class WorkflowValidationUtils {
 
 		const throttleKeyError = throttleKey
 			? WorkflowValidationUtils.validateVariableReference({
-					stepName: step.name,
 					fieldLabel: "throttleKey",
-					variablePath: throttleKey,
 					payloadSchema: context.payloadSchema,
+					stepName: step.name,
+					variablePath: throttleKey,
 				})
 			: null;
 
@@ -118,10 +115,10 @@ export class WorkflowValidationUtils {
 
 		if (dynamicKey) {
 			return WorkflowValidationUtils.validateVariableReference({
-				stepName: step.name,
 				fieldLabel: "dynamicKey",
-				variablePath: dynamicKey,
 				payloadSchema: context.payloadSchema,
+				stepName: step.name,
+				variablePath: dynamicKey,
 			});
 		}
 
@@ -152,15 +149,11 @@ export class WorkflowValidationUtils {
 	}
 }
 
-function schemaHasPath(
-	schema: Record<string, unknown>,
-	path: string[],
-): boolean {
+function schemaHasPath(schema: Record<string, unknown>, path: string[]): boolean {
 	let cursor: Record<string, unknown> | undefined = schema;
 	for (const segment of path) {
 		const props = cursor?.properties as Record<string, unknown> | undefined;
-		if (!props || typeof props !== "object" || !(segment in props))
-			return false;
+		if (!props || typeof props !== "object" || !(segment in props)) return false;
 		cursor = props[segment] as Record<string, unknown> | undefined;
 	}
 
@@ -169,6 +162,6 @@ function schemaHasPath(
 
 function errorResponse(text: string): ApiResponse {
 	return {
-		content: [{ type: "text" as const, text: `Error: ${text}` }],
+		content: [{ text: `Error: ${text}`, type: "text" as const }],
 	};
 }

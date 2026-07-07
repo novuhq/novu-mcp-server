@@ -43,8 +43,6 @@ export interface NovuApiHeaders {
 	[key: string]: string | undefined;
 }
 
-export type ServerRegion = "us" | "eu" | "local";
-
 export interface FindSubscribersParams {
 	email?: string;
 	name?: string;

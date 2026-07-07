@@ -1,16 +1,4 @@
 {
-	"name": "novu-mcp-server",
-	"version": "1.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"format": "biome format --write",
-		"lint:fix": "biome lint --fix",
-		"start": "wrangler dev",
-		"cf-typegen": "wrangler types",
-		"type-check": "tsc --noEmit"
-	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "1.13.1",
 		"agents": "^0.0.100",
@@ -19,7 +7,21 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.0.6",
 		"@types/node": "^24.0.14",
+		"cross-env": "^10.1.0",
 		"typescript": "^5.8.3",
-		"wrangler": "^4.24.3"
-	}
+		"wrangler": "^4.107.0"
+	},
+	"name": "novu-mcp-server",
+	"private": true,
+	"scripts": {
+		"cf-typegen": "wrangler types",
+		"deploy:eu": "wrangler deploy --env eu",
+		"deploy:us": "wrangler deploy --env us",
+		"dev": "cross-env WRANGLER_REGISTRY_PATH=.wrangler/registry wrangler dev",
+		"format": "biome format --write",
+		"lint:fix": "biome lint --fix",
+		"start": "cross-env WRANGLER_REGISTRY_PATH=.wrangler/registry wrangler dev",
+		"type-check": "tsc --noEmit"
+	},
+	"version": "1.0.0"
 }
