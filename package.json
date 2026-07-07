@@ -15,8 +15,8 @@
 	"private": true,
 	"scripts": {
 		"cf-typegen": "wrangler types",
-		"deploy": "wrangler deploy --env us",
 		"deploy:eu": "wrangler deploy --env eu",
+		"deploy:us": "wrangler deploy --env us",
 		"dev": "cross-env WRANGLER_REGISTRY_PATH=.wrangler/registry wrangler dev",
 		"format": "biome format --write",
 		"lint:fix": "biome lint --fix",
