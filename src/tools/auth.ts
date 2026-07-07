@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { isOAuthToken, NovuApiUtils } from "../utils/api";
+import type { ToolAccessors } from "../utils/tool-accessors";
 
 /**
  * Trim the /v1/users/me payload to identity basics — the tool must not dump
@@ -27,8 +28,7 @@ function summarizeUser(payload: unknown): Record<string, unknown> {
 
 export function registerAuthTools(
 	server: McpServer,
-	getToken: () => string | null,
-	getApiUrl: () => string,
+	{ getToken, getApiUrl }: ToolAccessors,
 	getRegion: () => string,
 ) {
 	// Identity + auth diagnostics: verifies the credential against the live

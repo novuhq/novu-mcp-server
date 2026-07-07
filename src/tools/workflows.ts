@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import type { ToolAccessors } from "../utils/tool-accessors";
 import { ToolFactory } from "../utils/tool-factory";
 import {
 	createWorkflowInputSchema,
@@ -25,16 +26,11 @@ const STEP_TYPE_GUIDE = [
 	'Skip conditions are JSONLogic objects on `controlValues.skip`, e.g. { "==": [{ "var": "subscriber.isOnline" }, true] }.',
 ].join("\n");
 
-export function registerWorkflowTools(
-	server: McpServer,
-	getToken: () => string | null,
-	getApiUrl: () => string,
-) {
+export function registerWorkflowTools(server: McpServer, accessors: ToolAccessors) {
 	// Get all workflows - simple GET endpoint
 	ToolFactory.createGetTool(
 		server,
-		getToken,
-		getApiUrl,
+		accessors,
 		"get_workflows",
 		"Get all available workflows from your Novu application with their basic information and identifiers",
 		"/v2/workflows",
@@ -44,8 +40,7 @@ export function registerWorkflowTools(
 	// Get specific workflow by ID - simple GET by ID
 	ToolFactory.createGetByIdTool(
 		server,
-		getToken,
-		getApiUrl,
+		accessors,
 		"get_workflow",
 		"Get detailed information about a specific workflow including its steps, channels, payload structure, and configuration",
 		"/v2/workflows/{id}",
@@ -55,7 +50,7 @@ export function registerWorkflowTools(
 	);
 
 	// Trigger workflow - custom logic using the factory
-	ToolFactory.createTool(server, getToken, getApiUrl, {
+	ToolFactory.createTool(server, accessors, {
 		description:
 			"Trigger a workflow to send notifications to a subscriber with custom payload data",
 		handler: ToolFactory.handleTriggerWorkflow,
@@ -64,7 +59,7 @@ export function registerWorkflowTools(
 	});
 
 	// Create workflow - complex validation and POST
-	ToolFactory.createTool(server, getToken, getApiUrl, {
+	ToolFactory.createTool(server, accessors, {
 		description: `Create a new workflow in Novu with comprehensive configuration including steps, preferences, and validation.\n\n${STEP_TYPE_GUIDE}`,
 		handler: async (input, context) => {
 			console.log(`Creating workflow "${input.name}" with ID "${input.workflowId}"`);
@@ -104,7 +99,7 @@ export function registerWorkflowTools(
 					method: "POST",
 					successMessage: "created workflow",
 				},
-				input.idempotencyKey,
+				context.idempotencyKey,
 			);
 		},
 		name: "create_workflow",
@@ -112,7 +107,7 @@ export function registerWorkflowTools(
 	});
 
 	// Update workflow - complex validation and PUT
-	ToolFactory.createTool(server, getToken, getApiUrl, {
+	ToolFactory.createTool(server, accessors, {
 		description: `Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation.\n\n${STEP_TYPE_GUIDE}`,
 		handler: async (input, context) => {
 			console.log(`Updating workflow "${input.workflowId}" with name "${input.name}"`);
@@ -151,7 +146,7 @@ export function registerWorkflowTools(
 					method: "PUT",
 					successMessage: "updated workflow",
 				},
-				input.idempotencyKey,
+				context.idempotencyKey,
 			);
 		},
 		name: "update_workflow",
@@ -161,8 +156,7 @@ export function registerWorkflowTools(
 	// Cancel a triggered event by transactionId
 	ToolFactory.createDeleteTool(
 		server,
-		getToken,
-		getApiUrl,
+		accessors,
 		"cancel_triggered_event",
 		"Cancel a pending triggered event (e.g. a delayed or digest notification that hasn't been sent yet) using its transactionId. The transactionId is returned when you trigger a workflow.",
 		"/v1/events/trigger/{id}",
@@ -172,7 +166,7 @@ export function registerWorkflowTools(
 	);
 
 	// Bulk trigger workflows
-	ToolFactory.createTool(server, getToken, getApiUrl, {
+	ToolFactory.createTool(server, accessors, {
 		description:
 			"Trigger multiple workflows in a single API call. Each event in the array specifies a workflow name, subscriber, and payload. Useful for batch notification operations.",
 		handler: async (input, context) => {
@@ -191,7 +185,7 @@ export function registerWorkflowTools(
 					method: "POST",
 					successMessage: `bulk triggered ${events.length} workflow(s)`,
 				},
-				input.idempotencyKey,
+				context.idempotencyKey,
 			);
 		},
 		name: "bulk_trigger_workflow",
@@ -225,18 +219,13 @@ export function registerWorkflowTools(
 				)
 				.min(1)
 				.describe("Array of workflow trigger events"),
-			idempotencyKey: z
-				.string()
-				.optional()
-				.describe("Optional idempotency key for the request"),
 		}),
 	});
 
 	// Delete workflow - simple DELETE by ID
 	ToolFactory.createDeleteTool(
 		server,
-		getToken,
-		getApiUrl,
+		accessors,
 		"delete_workflow",
 		"Delete an existing workflow from Novu by its unique identifier. This action is irreversible.",
 		"/v2/workflows/{id}",

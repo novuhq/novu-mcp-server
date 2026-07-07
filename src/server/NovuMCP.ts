@@ -8,6 +8,7 @@ import { registerNotificationTools } from "../tools/notifications";
 import { registerPreferenceTools } from "../tools/preferences";
 import { registerSubscriberTools } from "../tools/subscribers";
 import { registerWorkflowTools } from "../tools/workflows";
+import type { ToolAccessors } from "../utils/tool-accessors";
 
 /**
  * Per-session credentials handed off by the worker via `ctx.props` (the
@@ -34,26 +35,29 @@ export class NovuMCP extends McpAgent<Env, unknown, NovuProps> {
 		console.log("All Novu tools registered successfully");
 	}
 
-	private getToken = (): string | null => {
-		return this.props?.token ?? null;
-	};
+	/** Update session credentials without re-running tool registration. */
+	async updateSessionProps(props: NovuProps): Promise<void> {
+		await this.ctx.storage.put("props", props);
+		this.props = props;
+	}
 
-	private getApiUrl = (): string => {
-		return this.props?.apiUrl ?? "https://api.novu.co";
-	};
+	private getAccessors = (): ToolAccessors => ({
+		getApiUrl: () => this.props?.apiUrl ?? "https://api.novu.co",
+		getToken: () => this.props?.token ?? null,
+	});
 
 	private getRegion = (): string => {
 		return this.props?.region ?? "us";
 	};
 
 	private registerAllTools() {
-		// Register all tools with getter functions
-		registerAuthTools(this.server, this.getToken, this.getApiUrl, this.getRegion);
-		registerWorkflowTools(this.server, this.getToken, this.getApiUrl);
-		registerEnvironmentTools(this.server, this.getToken, this.getApiUrl);
-		registerSubscriberTools(this.server, this.getToken, this.getApiUrl);
-		registerNotificationTools(this.server, this.getToken, this.getApiUrl);
-		registerPreferenceTools(this.server, this.getToken, this.getApiUrl);
-		registerIntegrationTools(this.server, this.getToken, this.getApiUrl);
+		const accessors = this.getAccessors();
+		registerAuthTools(this.server, accessors, this.getRegion);
+		registerWorkflowTools(this.server, accessors);
+		registerEnvironmentTools(this.server, accessors);
+		registerSubscriberTools(this.server, accessors);
+		registerNotificationTools(this.server, accessors);
+		registerPreferenceTools(this.server, accessors);
+		registerIntegrationTools(this.server, accessors);
 	}
 }

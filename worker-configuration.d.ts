@@ -5,6 +5,7 @@ interface __BaseEnv_Env {
 	NOVU_API_URL: string;
 	NOVU_REGION: string;
 	CLERK_OAUTH_ISSUER: string;
+	MCP_OAUTH_CLIENT_ID_CURSOR?: string;
 	MCP_OBJECT: DurableObjectNamespace<import("./src/index").NovuMCP>;
 }
 declare namespace Cloudflare {
@@ -16,12 +17,14 @@ declare namespace Cloudflare {
 		NOVU_API_URL: string;
 		NOVU_REGION: string;
 		CLERK_OAUTH_ISSUER: string;
+		MCP_OAUTH_CLIENT_ID_CURSOR?: string;
 		MCP_OBJECT: DurableObjectNamespace<import("./src/index").NovuMCP>;
 	}
 	interface EuEnv {
 		NOVU_API_URL: string;
 		NOVU_REGION: string;
 		CLERK_OAUTH_ISSUER: string;
+		MCP_OAUTH_CLIENT_ID_CURSOR?: string;
 		MCP_OBJECT: DurableObjectNamespace<import("./src/index").NovuMCP>;
 	}
 	interface Env extends __BaseEnv_Env {}
