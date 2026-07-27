@@ -1,7 +1,10 @@
 import { mergeOAuthScopes } from "../scopes";
 import type { DcrRequestBody, McpOAuthClient } from "./types";
 
-/** Stable Cursor OAuth callbacks — loopback ports are intentionally ignored. */
+/**
+ * Stable Cursor OAuth callbacks eligible for the static client.
+ * Requests that include any other redirect URI (e.g. loopback) use real DCR.
+ */
 export const CURSOR_REDIRECT_URIS = [
 	"cursor://anysphere.cursor-mcp/oauth/callback",
 	"https://www.cursor.com/agents/mcp/oauth/callback",
@@ -13,12 +16,16 @@ function normalizeRedirectUri(uri: string): string {
 	return uri.replace(/\/+$/, "");
 }
 
+/**
+ * Static Cursor client only when every requested redirect URI is in the known
+ * set. Any unknown / missing callback falls through to real DCR.
+ */
 export function isCursorDcr(body: DcrRequestBody): boolean {
-	if (!Array.isArray(body.redirect_uris)) {
+	if (!Array.isArray(body.redirect_uris) || body.redirect_uris.length === 0) {
 		return false;
 	}
 
-	return body.redirect_uris.some(
+	return body.redirect_uris.every(
 		(uri) => typeof uri === "string" && CURSOR_REDIRECT_URI_SET.has(normalizeRedirectUri(uri)),
 	);
 }

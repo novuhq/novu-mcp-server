@@ -6,7 +6,8 @@ const MCP_OAUTH_CLIENTS = [cursorOAuthClient] as const;
 
 /**
  * Return a static DCR registration document when the request matches a known
- * MCP client and that client's `MCP_OAUTH_CLIENT_ID_*` env var is set.
+ * MCP client (redirect URIs ⊆ that client's allowlist) and its
+ * `MCP_OAUTH_CLIENT_ID_*` env var is set. Otherwise callers forward to Clerk DCR.
  */
 export function resolveStaticDcrRegistration(
 	env: Env,
