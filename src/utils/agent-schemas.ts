@@ -115,6 +115,28 @@ export const deleteAgentInputSchema = z.object({
 	identifier: z.string().describe("The agent identifier (slug) to delete — not the Mongo _id"),
 });
 
+export const connectAgentChannelSchema = z.enum([
+	"agent-chat",
+	"email",
+	"sendblue",
+	"skip",
+	"slack",
+	"teams",
+	"telegram",
+	"whatsapp",
+]);
+
+export const connectAgentInputSchema = z.object({
+	channel: connectAgentChannelSchema
+		.optional()
+		.describe(
+			"Channel to connect via `npx novu connect`. Omit to let the playbook channel picker run.",
+		),
+	identifier: z
+		.string()
+		.describe("The agent identifier (slug) to connect a channel to — not the Mongo _id"),
+});
+
 export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;
 export type UpdateAgentInput = z.infer<typeof updateAgentInputSchema>;
 

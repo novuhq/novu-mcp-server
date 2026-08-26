@@ -4,12 +4,14 @@ import {
 	type AgentRuntimeIntegration,
 	buildCreateAgentBody,
 	buildUpdateAgentBody,
+	connectAgentInputSchema,
 	createAgentInputSchema,
 	deleteAgentInputSchema,
 	findAgentRuntimeIntegration,
 	listAgentsInputSchema,
 	updateAgentInputSchema,
 } from "../utils/agent-schemas";
+import { buildConnectAgentOverlay } from "../utils/connect-cli";
 import type { ToolAccessors } from "../utils/tool-accessors";
 import { ToolFactory } from "../utils/tool-factory";
 
@@ -22,6 +24,14 @@ const CREATE_AGENT_DESCRIPTION = [
 	"For managed agents with your own credentials, pass integrationId from get_integrations (entries where kind==='agent').",
 	"Never pass an Anthropic API key to this tool.",
 	"Optional managed fields: systemPrompt, model, tools, mcpServers, skills.",
+	"After success, call connect_agent with the returned identifier to connect a channel. Do not ask the user for Slack, Telegram, or other channel tokens.",
+].join(" ");
+
+const CONNECT_AGENT_DESCRIPTION = [
+	"Get instructions to connect a channel (Slack, Telegram, Email, WhatsApp, Teams, Agent Chat, iMessage) to an existing Novu agent.",
+	"Call this after create_agent, or with an identifier from get_agents.",
+	"Returns the Novu CLI playbook URL plus mandatory flags so you attach a channel to THIS agent — do not create a second agent, and never pass --keyless.",
+	"Never accept channel secrets (Slack tokens, Telegram bot tokens, Sendblue keys) as tool arguments.",
 ].join(" ");
 
 const UPDATE_AGENT_DESCRIPTION = [
@@ -123,6 +133,54 @@ export function registerAgentTools(server: McpServer, accessors: ToolAccessors) 
 		"identifier",
 		"The agent identifier (slug) to retrieve — not the Mongo _id",
 	);
+
+	ToolFactory.createTool(server, accessors, {
+		description: CONNECT_AGENT_DESCRIPTION,
+		handler: async (input, context) => {
+			const agent = await fetchAgentByIdentifier(context, input.identifier);
+			if (agent === "not_found") {
+				return {
+					content: [
+						{
+							text: `Error: Agent "${input.identifier}" was not found. Call get_agents to list agents, or create_agent first.`,
+							type: "text" as const,
+						},
+					],
+				};
+			}
+			if (agent === null) {
+				return {
+					content: [
+						{
+							text: `Error: Failed to look up agent "${input.identifier}". Retry, or call get_agents.`,
+							type: "text" as const,
+						},
+					],
+				};
+			}
+
+			const name =
+				typeof agent.name === "string" && agent.name.trim() ? agent.name : input.identifier;
+			const identifier =
+				typeof agent.identifier === "string" ? agent.identifier : input.identifier;
+
+			return {
+				content: [
+					{
+						text: buildConnectAgentOverlay({
+							apiUrl: context.apiUrl,
+							channel: input.channel,
+							identifier,
+							name,
+						}),
+						type: "text" as const,
+					},
+				],
+			};
+		},
+		name: "connect_agent",
+		schema: connectAgentInputSchema,
+	});
 
 	ToolFactory.createTool(server, accessors, {
 		description: UPDATE_AGENT_DESCRIPTION,
@@ -231,7 +289,50 @@ function formatCreatedAgent(data: unknown, requestedIdentifier: string): string 
 			? ` (requested "${requestedIdentifier}" collided; API assigned "${returnedIdentifier}")`
 			: "";
 
-	return `Successfully created agent "${returnedIdentifier}"${note}:\n\n${JSON.stringify(data, null, 2)}`;
+	return [
+		`Successfully created agent "${returnedIdentifier}"${note}.`,
+		`Next: call connect_agent with identifier "${returnedIdentifier}" to connect a channel. Do not ask the user for Slack, Telegram, or other channel tokens.`,
+		JSON.stringify(data, null, 2),
+	].join("\n\n");
+}
+
+async function fetchAgentByIdentifier(
+	context: { apiUrl: string; environmentId?: string; idempotencyKey?: string; token: string },
+	identifier: string,
+): Promise<Record<string, unknown> | "not_found" | null> {
+	const headers = NovuApiUtils.prepareHeaders(context.token, {
+		environmentId: context.environmentId,
+		idempotencyKey: context.idempotencyKey,
+	});
+
+	try {
+		const response = await fetch(
+			`${context.apiUrl}/v1/agents/${encodeURIComponent(identifier)}`,
+			{
+				headers,
+				method: "GET",
+			},
+		);
+
+		if (response.status === 404) {
+			return "not_found";
+		}
+
+		if (!response.ok) {
+			console.error("Failed to fetch agent for connect_agent:", response.status);
+
+			return null;
+		}
+
+		const payload: unknown = await response.json();
+		const record = unwrapAgentRecord(payload);
+
+		return record ?? { identifier };
+	} catch (error) {
+		console.error("Error fetching agent for connect_agent:", error);
+
+		return null;
+	}
 }
 
 function unwrapAgentRecord(data: unknown): Record<string, unknown> | null {
