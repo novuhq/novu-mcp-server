@@ -35,6 +35,7 @@ The Model Context Protocol (MCP) server for Novu — bring AI assistants directl
 
 A single MCP server that unlocks your entire Novu workspace for AI agents:
 
+- **Agents** — create, list, inspect, update, and delete Novu agents (managed demo Claude by default)
 - **Notifications** — fetch and filter events with full execution logs and delivery status
 - **Subscribers** — search and manage recipients by email, phone, name, or ID
 - **Workflows** — list, inspect, create, update, and trigger notification workflows
@@ -163,6 +164,11 @@ For the EU region, swap the URL for `https://eu.mcp.novu.co/`.
 | Tool | Description |
 | ---- | ----------- |
 | `whoami` | Show who is authenticated (verifies the credential against the Novu API) and the active region |
+| `create_agent` | Create an agent (defaults to managed demo Claude; no API key needed) |
+| `get_agents` | List agents with cursor pagination |
+| `get_agent` | Retrieve a single agent by identifier |
+| `update_agent` | Update an agent's name, status, bridge URL, or behavior |
+| `delete_agent` | Delete an agent (optionally also from the provider) |
 | `get_environments` | List all environments with their details and API keys |
 | `get_notifications` | Fetch events with filtering by channel, template, subscriber, date, and more |
 | `get_notification` | Get a specific notification with detailed execution logs |
