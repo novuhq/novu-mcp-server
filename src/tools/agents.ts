@@ -1,16 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { NovuApiUtils } from "../utils/api";
 import {
 	type AgentRuntimeIntegration,
+	agentResourcePath,
 	buildCreateAgentBody,
 	buildUpdateAgentBody,
 	connectAgentInputSchema,
 	createAgentInputSchema,
 	deleteAgentInputSchema,
 	findAgentRuntimeIntegration,
+	getAgentInputSchema,
 	listAgentsInputSchema,
 	updateAgentInputSchema,
 } from "../utils/agent-schemas";
+import { NovuApiUtils } from "../utils/api";
 import { buildConnectAgentOverlay } from "../utils/connect-cli";
 import type { ToolAccessors } from "../utils/tool-accessors";
 import { ToolFactory } from "../utils/tool-factory";
@@ -24,7 +26,7 @@ const CREATE_AGENT_DESCRIPTION = [
 	"For managed agents with your own credentials, pass integrationId from get_integrations (entries where kind==='agent').",
 	"Never pass an Anthropic API key to this tool.",
 	"Optional managed fields: systemPrompt, model, tools, mcpServers, skills.",
-	"After success, call connect_agent with the returned identifier to connect a channel. Do not ask the user for Slack, Telegram, or other channel tokens. To route a workflow through this agent, call update_workflow (or create_workflow) with agent: { identifier: \"<slug>\" }.",
+	'After success, call connect_agent with the returned identifier to connect a channel. Do not ask the user for Slack, Telegram, or other channel tokens. To route a workflow through this agent, call update_workflow (or create_workflow) with agent: { identifier: "<slug>" }.',
 ].join(" ");
 
 const CONNECT_AGENT_DESCRIPTION = [
@@ -123,15 +125,17 @@ export function registerAgentTools(server: McpServer, accessors: ToolAccessors) 
 		},
 	);
 
-	ToolFactory.createGetByIdTool(
+	ToolFactory.createQueryGetTool(
 		server,
 		accessors,
 		"get_agent",
 		"Retrieve a single agent by its identifier (slug), including runtime config when managed.",
-		"/v1/agents/{id}",
 		"fetched agent",
-		"identifier",
-		"The agent identifier (slug) to retrieve — not the Mongo _id",
+		getAgentInputSchema,
+		{
+			buildEndpoint: (input) => agentResourcePath(input.identifier),
+			getIdentifier: (input) => input.identifier,
+		},
 	);
 
 	ToolFactory.createTool(server, accessors, {
@@ -203,7 +207,7 @@ export function registerAgentTools(server: McpServer, accessors: ToolAccessors) 
 				context,
 				{
 					body,
-					endpoint: `/v1/agents/${identifier}`,
+					endpoint: agentResourcePath(identifier),
 					identifier,
 					method: "PATCH",
 					successMessage: "updated agent",
@@ -224,7 +228,7 @@ export function registerAgentTools(server: McpServer, accessors: ToolAccessors) 
 			return ToolFactory.makeApiRequest(
 				context,
 				{
-					endpoint: `/v1/agents/${input.identifier}${query}`,
+					endpoint: `${agentResourcePath(input.identifier)}${query}`,
 					identifier: input.identifier,
 					method: "DELETE",
 					successMessage: "deleted agent",
@@ -306,13 +310,10 @@ async function fetchAgentByIdentifier(
 	});
 
 	try {
-		const response = await fetch(
-			`${context.apiUrl}/v1/agents/${encodeURIComponent(identifier)}`,
-			{
-				headers,
-				method: "GET",
-			},
-		);
+		const response = await fetch(`${context.apiUrl}${agentResourcePath(identifier)}`, {
+			headers,
+			method: "GET",
+		});
 
 		if (response.status === 404) {
 			return "not_found";

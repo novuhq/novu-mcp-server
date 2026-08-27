@@ -6,6 +6,14 @@ export const AGENT_IDENTIFIER_MAX_LENGTH = 60;
 /** Matches Novu's SLUG_IDENTIFIER_REGEX for agent identifiers. */
 export const SLUG_IDENTIFIER_REGEX = /^[a-zA-Z0-9]+(?:[-_.][a-zA-Z0-9]+)*$/;
 
+/** Agent slug used in `/v1/agents/:identifier` — rejects path separators and `..`. */
+export const agentIdentifierSchema = z
+	.string()
+	.min(1)
+	.max(AGENT_IDENTIFIER_MAX_LENGTH)
+	.regex(SLUG_IDENTIFIER_REGEX)
+	.describe("The agent identifier (slug) — letters, numbers, -, _, . — not the Mongo _id");
+
 export const agentRuntimeSchema = z.enum(["self-hosted", "managed"]);
 
 export const agentSkillSchema = z.object({
@@ -17,10 +25,7 @@ export const agentSkillSchema = z.object({
 export const createAgentInputSchema = z.object({
 	active: z.boolean().optional().describe("Whether the agent is active. Defaults to true."),
 	description: z.string().optional().describe("Optional description of the agent"),
-	identifier: z
-		.string()
-		.max(AGENT_IDENTIFIER_MAX_LENGTH)
-		.regex(SLUG_IDENTIFIER_REGEX)
+	identifier: agentIdentifierSchema
 		.optional()
 		.describe(
 			"Unique slug identifier for the agent (letters, numbers, -, _, .). Auto-derived from name when omitted.",
@@ -76,7 +81,9 @@ export const updateAgentInputSchema = z.object({
 		.string()
 		.optional()
 		.describe("Dev tunnel bridge URL (not allowed in production environments)"),
-	identifier: z.string().describe("The agent identifier (slug) to update — not the Mongo _id"),
+	identifier: agentIdentifierSchema.describe(
+		"The agent identifier (slug) to update — not the Mongo _id",
+	),
 	name: z
 		.string()
 		.max(AGENT_NAME_MAX_LENGTH)
@@ -112,7 +119,9 @@ export const deleteAgentInputSchema = z.object({
 		.describe(
 			"When true, also archive/destroy the agent on the provider side (e.g. Anthropic). Defaults to false — only the Novu record is deleted.",
 		),
-	identifier: z.string().describe("The agent identifier (slug) to delete — not the Mongo _id"),
+	identifier: agentIdentifierSchema.describe(
+		"The agent identifier (slug) to delete — not the Mongo _id",
+	),
 });
 
 export const connectAgentChannelSchema = z.enum([
@@ -132,13 +141,23 @@ export const connectAgentInputSchema = z.object({
 		.describe(
 			"Channel to connect via `npx novu connect`. Omit to let the playbook channel picker run.",
 		),
-	identifier: z
-		.string()
-		.describe("The agent identifier (slug) to connect a channel to — not the Mongo _id"),
+	identifier: agentIdentifierSchema.describe(
+		"The agent identifier (slug) to connect a channel to — not the Mongo _id",
+	),
+});
+
+export const getAgentInputSchema = z.object({
+	identifier: agentIdentifierSchema.describe(
+		"The agent identifier (slug) to retrieve — not the Mongo _id",
+	),
 });
 
 export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;
 export type UpdateAgentInput = z.infer<typeof updateAgentInputSchema>;
+
+export function agentResourcePath(identifier: string): string {
+	return `/v1/agents/${encodeURIComponent(identifier)}`;
+}
 
 export interface AgentRuntimeIntegration {
 	_id: string;
