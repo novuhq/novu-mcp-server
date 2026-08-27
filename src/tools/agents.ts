@@ -6,7 +6,6 @@ import {
 	buildUpdateAgentBody,
 	connectAgentInputSchema,
 	createAgentInputSchema,
-	deleteAgentInputSchema,
 	findAgentRuntimeIntegration,
 	getAgentInputSchema,
 	listAgentsInputSchema,
@@ -217,27 +216,6 @@ export function registerAgentTools(server: McpServer, accessors: ToolAccessors) 
 		},
 		name: "update_agent",
 		schema: updateAgentInputSchema,
-	});
-
-	ToolFactory.createTool(server, accessors, {
-		description:
-			"Delete an agent by its identifier (slug). Removes agent-integration links and clears workflow assignments. Pass deleteFromProvider:true to also archive the agent on the provider side (e.g. Anthropic); defaults to false.",
-		handler: async (input, context) => {
-			const query = input.deleteFromProvider === true ? "?deleteFromProvider=true" : "";
-
-			return ToolFactory.makeApiRequest(
-				context,
-				{
-					endpoint: `${agentResourcePath(input.identifier)}${query}`,
-					identifier: input.identifier,
-					method: "DELETE",
-					successMessage: "deleted agent",
-				},
-				context.idempotencyKey,
-			);
-		},
-		name: "delete_agent",
-		schema: deleteAgentInputSchema,
 	});
 }
 

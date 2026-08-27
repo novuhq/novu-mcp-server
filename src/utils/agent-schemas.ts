@@ -112,18 +112,6 @@ export const listAgentsInputSchema = z.object({
 	limit: z.number().int().min(1).max(100).optional().describe("Page size (default 10)"),
 });
 
-export const deleteAgentInputSchema = z.object({
-	deleteFromProvider: z
-		.boolean()
-		.optional()
-		.describe(
-			"When true, also archive/destroy the agent on the provider side (e.g. Anthropic). Defaults to false — only the Novu record is deleted.",
-		),
-	identifier: agentIdentifierSchema.describe(
-		"The agent identifier (slug) to delete — not the Mongo _id",
-	),
-});
-
 export const connectAgentChannelSchema = z.enum([
 	"agent-chat",
 	"email",
