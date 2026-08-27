@@ -102,6 +102,30 @@ export const workflowPreferencesSchema = z.object({
 	workflow: preferencesObjectSchema.optional().describe("Workflow-specific preferences."),
 });
 
+export const workflowAgentProviderConfigSchema = z.object({
+	replyTo: z
+		.string()
+		.optional()
+		.describe(
+			"Inbound Reply-To for this provider. Used so email replies route back to the assigned agent.",
+		),
+});
+
+export const workflowAgentConfigSchema = z.object({
+	identifier: z
+		.string()
+		.min(1)
+		.describe(
+			"Agent identifier (slug) from get_agents — not the Mongo _id. Required to assign the workflow to that agent.",
+		),
+	providers: z
+		.record(workflowAgentProviderConfigSchema)
+		.optional()
+		.describe(
+			"Optional per-provider overrides keyed by providerId. Today only novu-email-agent.replyTo is used.",
+		),
+});
+
 // --- Payload schema (flat-descriptor alternative) -------------------------
 
 function createPayloadPropertyBaseSchema() {
@@ -158,6 +182,12 @@ export const payloadPropertySchema = z.union([
 
 export const baseWorkflowInputSchema = z.object({
 	active: z.boolean().optional().describe("Whether the workflow is active."),
+	agent: workflowAgentConfigSchema
+		.nullable()
+		.optional()
+		.describe(
+			"Assign this workflow to an agent so it can be triggered or replied to on the agent's connected channels. Use identifier from get_agents (slug, not Mongo _id). Pass null to clear an existing assignment. Omit on update to leave the assignment unchanged.",
+		),
 	critical: z
 		.boolean()
 		.optional()

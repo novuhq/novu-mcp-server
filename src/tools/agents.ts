@@ -24,7 +24,7 @@ const CREATE_AGENT_DESCRIPTION = [
 	"For managed agents with your own credentials, pass integrationId from get_integrations (entries where kind==='agent').",
 	"Never pass an Anthropic API key to this tool.",
 	"Optional managed fields: systemPrompt, model, tools, mcpServers, skills.",
-	"After success, call connect_agent with the returned identifier to connect a channel. Do not ask the user for Slack, Telegram, or other channel tokens.",
+	"After success, call connect_agent with the returned identifier to connect a channel. Do not ask the user for Slack, Telegram, or other channel tokens. To route a workflow through this agent, call update_workflow (or create_workflow) with agent: { identifier: \"<slug>\" }.",
 ].join(" ");
 
 const CONNECT_AGENT_DESCRIPTION = [

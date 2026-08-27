@@ -3,6 +3,7 @@ import { McpAgent } from "agents/mcp";
 // Import all tool registration functions
 import { registerAgentTools } from "../tools/agents";
 import { registerAuthTools } from "../tools/auth";
+import { registerConversationTools } from "../tools/conversations";
 import { registerEnvironmentTools } from "../tools/environments";
 import { registerIntegrationTools } from "../tools/integrations";
 import { registerNotificationTools } from "../tools/notifications";
@@ -55,6 +56,7 @@ export class NovuMCP extends McpAgent<Env, unknown, NovuProps> {
 		const accessors = this.getAccessors();
 		registerAuthTools(this.server, accessors, this.getRegion);
 		registerAgentTools(this.server, accessors);
+		registerConversationTools(this.server, accessors);
 		registerWorkflowTools(this.server, accessors);
 		registerEnvironmentTools(this.server, accessors);
 		registerSubscriberTools(this.server, accessors);
