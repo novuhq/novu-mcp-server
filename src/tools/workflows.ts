@@ -10,6 +10,11 @@ import {
 } from "../utils/workflow-schemas";
 import { WorkflowValidationUtils } from "../utils/workflow-validation";
 
+const AGENT_ASSIGNMENT_GUIDE = [
+	"To assign an agent: call get_agents, then pass agent: { identifier: \"<slug>\" } (not Mongo _id).",
+	"Pass agent: null to unassign. Omit agent on update to leave the current assignment unchanged.",
+].join(" ");
+
 const STEP_TYPE_GUIDE = [
 	"Supported step types (set via `type` discriminator on each step):",
 	"- in_app: subject + body",
@@ -60,7 +65,7 @@ export function registerWorkflowTools(server: McpServer, accessors: ToolAccessor
 
 	// Create workflow - complex validation and POST
 	ToolFactory.createTool(server, accessors, {
-		description: `Create a new workflow in Novu with comprehensive configuration including steps, preferences, and validation.\n\n${STEP_TYPE_GUIDE}`,
+		description: `Create a new workflow in Novu with comprehensive configuration including steps, preferences, and validation.\n\n${AGENT_ASSIGNMENT_GUIDE}\n\n${STEP_TYPE_GUIDE}`,
 		handler: async (input, context) => {
 			console.log(`Creating workflow "${input.name}" with ID "${input.workflowId}"`);
 
@@ -80,6 +85,7 @@ export function registerWorkflowTools(server: McpServer, accessors: ToolAccessor
 			};
 
 			assignOptional(requestBody, {
+				agent: input.agent,
 				critical: input.critical,
 				description: input.description,
 				payloadSchema: resolvedPayloadSchema,
@@ -108,7 +114,7 @@ export function registerWorkflowTools(server: McpServer, accessors: ToolAccessor
 
 	// Update workflow - complex validation and PUT
 	ToolFactory.createTool(server, accessors, {
-		description: `Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation.\n\n${STEP_TYPE_GUIDE}`,
+		description: `Update an existing workflow in Novu with comprehensive configuration including steps, preferences, and validation.\n\n${AGENT_ASSIGNMENT_GUIDE}\n\n${STEP_TYPE_GUIDE}`,
 		handler: async (input, context) => {
 			console.log(`Updating workflow "${input.workflowId}" with name "${input.name}"`);
 
@@ -128,6 +134,7 @@ export function registerWorkflowTools(server: McpServer, accessors: ToolAccessor
 			};
 
 			assignOptional(requestBody, {
+				agent: input.agent,
 				critical: input.critical,
 				description: input.description,
 				payloadSchema: resolvedPayloadSchema,

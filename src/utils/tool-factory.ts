@@ -32,6 +32,7 @@ interface ApiRequestConfig {
 	identifier?: string;
 	customHeaders?: Record<string, string>;
 	formatSuccess?: (data: unknown) => string;
+	formatError?: (status: number, errorText: string, identifier?: string) => string;
 }
 
 /**
@@ -148,6 +149,24 @@ export class ToolFactory {
 		}
 
 		if (!response.ok) {
+			if (requestConfig.formatError) {
+				const errorText = await response.text();
+				console.error("Novu API Error:", response.status, errorText);
+
+				return {
+					content: [
+						{
+							text: requestConfig.formatError(
+								response.status,
+								errorText,
+								requestConfig.identifier,
+							),
+							type: "text" as const,
+						},
+					],
+				};
+			}
+
 			return NovuApiUtils.handleApiResponse(
 				response,
 				requestConfig.successMessage,
@@ -219,6 +238,8 @@ export class ToolFactory {
 		options: {
 			buildEndpoint: (input: z.infer<T>) => string;
 			formatSuccess?: (data: unknown, input: z.infer<T>, endpoint: string) => string;
+			formatError?: (status: number, errorText: string, identifier?: string) => string;
+			getIdentifier?: (input: z.infer<T>) => string | undefined;
 			validate?: (input: z.infer<T>) => ApiResponse | null;
 		},
 	) {
@@ -235,9 +256,11 @@ export class ToolFactory {
 					context,
 					{
 						endpoint,
+						formatError: options.formatError,
 						formatSuccess: options.formatSuccess
 							? (data) => options.formatSuccess!(data, input, endpoint)
 							: undefined,
+						identifier: options.getIdentifier?.(input),
 						method: "GET",
 						successMessage,
 					},
@@ -262,6 +285,7 @@ export class ToolFactory {
 		idParamName = "id",
 		idDescription = "The ID to retrieve",
 		formatSuccess?: (data: unknown, id: string) => string,
+		formatError?: (status: number, errorText: string, identifier?: string) => string,
 	) {
 		ToolFactory.createTool(server, accessors, {
 			description,
@@ -272,6 +296,7 @@ export class ToolFactory {
 					context,
 					{
 						endpoint,
+						formatError,
 						formatSuccess: formatSuccess
 							? (data) => formatSuccess(data, idValue)
 							: undefined,
