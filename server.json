@@ -1,0 +1,33 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.novuhq/novu-mcp-server",
+  "title": "Novu",
+  "description": "Manage Novu workflows, subscribers, events, preferences, and integrations from any MCP client.",
+  "version": "1.0.0",
+  "websiteUrl": "https://novu.co",
+  "repository": {
+    "url": "https://github.com/novuhq/novu-mcp-server",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.novu.co/?region={region}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer token using your Novu API key, e.g. \"Bearer nv_xxx\". Generate one at https://web.novu.co/settings.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ],
+      "variables": {
+        "region": {
+          "description": "Novu Cloud region. Use \"us\" for api.novu.co or \"eu\" for eu.api.novu.co.",
+          "default": "us",
+          "choices": ["us", "eu"]
+        }
+      }
+    }
+  ]
+}
