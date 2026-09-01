@@ -4,20 +4,8 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "novu-mcp-server",
-	"main": "src/index.ts",
 	"compatibility_date": "2025-03-10",
-	"compatibility_flags": [
-		"nodejs_compat"
-	],
-	"migrations": [
-		{
-			"new_sqlite_classes": [
-				"NovuMCP"
-			],
-			"tag": "v1"
-		}
-	],
+	"compatibility_flags": ["nodejs_compat"],
 	"durable_objects": {
 		"bindings": [
 			{
@@ -26,16 +14,103 @@
 			}
 		]
 	},
+	"main": "src/index.ts",
+	"migrations": [
+		{
+			"new_sqlite_classes": ["NovuMCP"],
+			"tag": "v1"
+		}
+	],
+	/**
+	 * The top-level config is for LOCAL DEVELOPMENT ONLY (`pnpm dev`). It has NO
+	 * `routes`, so `wrangler dev` serves on localhost and `request.url` resolves
+	 * to the localhost origin — which is what OAuth discovery advertises. Real
+	 * deployments live under the named `us`/`eu` environments below (deploy with
+	 * `pnpm deploy` / `pnpm deploy:eu`); the distinct dev name avoids clobbering
+	 * a production worker on an accidental route-less `wrangler deploy`.
+	 */
+	"name": "novu-mcp-server-dev",
 	"observability": {
 		"enabled": true
 	},
-	"routes": [
-		{
-			"pattern": "mcp.novu.co",
-			"zone_name": "novu.co",
-			"custom_domain": true
+	/**
+	 * Per-deployment config. `NOVU_API_URL` is the Novu API base URL this
+	 * deployment proxies to; `NOVU_REGION` is the display label surfaced by
+	 * `whoami` and used to reject mismatched legacy `?region=` params. Both are
+	 * public, non-secret. The Clerk OAuth issuer is NOT declared here — it is a
+	 * Cloudflare secret (`wrangler secret put CLERK_OAUTH_ISSUER`) so it stays
+	 * out of the public repo. When the secret is unset, OAuth is disabled and
+	 * the deployment is API-key only (the self-hosted story). Local dev overrides
+	 * all of these via `.dev.vars`.
+	 */
+	"vars": {
+		"NOVU_API_URL": "https://api.novu.co",
+		"NOVU_REGION": "us"
+	},
+	"env": {
+		"us": {
+			"name": "novu-mcp-server",
+			"durable_objects": {
+				"bindings": [
+					{
+						"class_name": "NovuMCP",
+						"name": "MCP_OBJECT"
+					}
+				]
+			},
+			"migrations": [
+				{
+					"new_sqlite_classes": ["NovuMCP"],
+					"tag": "v1"
+				}
+			],
+			"observability": {
+				"enabled": true
+			},
+			"routes": [
+				{
+					"custom_domain": true,
+					"pattern": "mcp.novu.co",
+					"zone_name": "novu.co"
+				}
+			],
+			"vars": {
+				"NOVU_API_URL": "https://api.novu.co",
+				"NOVU_REGION": "us"
+			}
+		},
+		"eu": {
+			"name": "novu-mcp-server-eu",
+			"durable_objects": {
+				"bindings": [
+					{
+						"class_name": "NovuMCP",
+						"name": "MCP_OBJECT"
+					}
+				]
+			},
+			"migrations": [
+				{
+					"new_sqlite_classes": ["NovuMCP"],
+					"tag": "v1"
+				}
+			],
+			"observability": {
+				"enabled": true
+			},
+			"routes": [
+				{
+					"custom_domain": true,
+					"pattern": "eu.mcp.novu.co",
+					"zone_name": "novu.co"
+				}
+			],
+			"vars": {
+				"NOVU_API_URL": "https://eu.api.novu.co",
+				"NOVU_REGION": "eu"
+			}
 		}
-	]
+	}
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

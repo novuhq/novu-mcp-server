@@ -1,3 +1,16 @@
+export type {
+	DelayType,
+	DigestType,
+	EditorType,
+	HttpMethod,
+	RedirectTarget,
+	Severity,
+	StepType,
+	ThrottleType,
+	TimeUnit,
+	WorkflowStep,
+} from "../utils/workflow-schemas";
+
 export interface ChannelPreferences {
 	email: boolean;
 	sms: boolean;
@@ -30,8 +43,6 @@ export interface NovuApiHeaders {
 	[key: string]: string | undefined;
 }
 
-export type ServerRegion = 'us' | 'eu';
-
 export interface FindSubscribersParams {
 	email?: string;
 	name?: string;
@@ -50,4 +61,4 @@ export interface GetNotificationsParams {
 	topicKey?: string;
 	after?: string;
 	before?: string;
-} 
+}
