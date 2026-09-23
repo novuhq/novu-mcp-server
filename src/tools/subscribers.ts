@@ -146,4 +146,42 @@ export function registerSubscriberTools(server: McpServer, accessors: ToolAccess
 				]),
 		},
 	);
+
+	ToolFactory.createQueryGetTool(
+		server,
+		accessors,
+		"get_subscriber_notifications",
+		"List a subscriber's in-app inbox notifications with seen, read, archived, and snoozed filters. Use this for inbox state for one person, not org-wide trends.",
+		"fetched subscriber notifications",
+		z.object({
+			after: z.string().optional().describe("Cursor for the next page"),
+			archived: z.boolean().optional().describe("Filter by archived state"),
+			createdGte: z
+				.number()
+				.optional()
+				.describe("Unix timestamp in milliseconds, created on or after"),
+			createdLte: z
+				.number()
+				.optional()
+				.describe("Unix timestamp in milliseconds, created on or before"),
+			limit: z.number().min(1).max(100).optional().describe("Page size (default 10)"),
+			read: z.boolean().optional().describe("Filter by read/unread state"),
+			seen: z.boolean().optional().describe("Filter by seen state"),
+			severity: z.array(z.string()).optional().describe("Filter by severity levels"),
+			snoozed: z.boolean().optional().describe("Filter by snoozed state"),
+			subscriberId: z.string().describe("The subscriberId whose inbox to retrieve"),
+			tags: z.array(z.string()).optional().describe("Filter by workflow tags"),
+		}),
+		{
+			buildEndpoint: (input) => {
+				const { subscriberId, ...filters } = input;
+				const queryString = NovuApiUtils.buildQueryParams(filters).toString();
+
+				return `/v2/subscribers/${encodeURIComponent(subscriberId)}/notifications${queryString ? `?${queryString}` : ""}`;
+			},
+			formatSuccess: (data, input) =>
+				`Successfully fetched inbox notifications for ${input.subscriberId}:\n\n${JSON.stringify(data, null, 2)}`,
+			getIdentifier: (input) => input.subscriberId,
+		},
+	);
 }
