@@ -63,36 +63,8 @@ export function registerActivityTools(server: McpServer, accessors: ToolAccessor
 	ToolFactory.createQueryGetTool(
 		server,
 		accessors,
-		"get_activity_stats",
-		"Entry point for activity analytics: how many workflow runs match a slice, optionally grouped by day, status, deliveryLifecycleStatus, deliveryLifecycleDetail, workflow, or channel. Use this for counts and comparisons. Use get_workflow_runs only to fetch example runs after you know the slice.",
-		"fetched activity stats",
-		z.object({
-			...workflowRunFiltersSchema,
-			groupBy: z
-				.enum([
-					"day",
-					"status",
-					"deliveryLifecycleStatus",
-					"deliveryLifecycleDetail",
-					"workflow",
-					"channel",
-				])
-				.optional()
-				.describe("Optional single dimension to group counts by"),
-		}),
-		{
-			buildEndpoint: (input) =>
-				`/v1/activity/workflow-runs/stats${buildWorkflowRunQuery(input)}`,
-			formatSuccess: (data) =>
-				`Successfully fetched activity stats:\n\n${JSON.stringify(data, null, 2)}`,
-		},
-	);
-
-	ToolFactory.createQueryGetTool(
-		server,
-		accessors,
 		"get_workflow_runs",
-		"List workflow runs for drill-down after get_activity_stats. Supports the same filters plus cursor pagination. Default 10 results, max 25. Use get_workflow_run for one run's step timeline. Do not page to count — use get_activity_stats.",
+		"List workflow runs with optional filters and cursor pagination. Default 10 results, max 25. Use get_workflow_run for one run's step timeline. Narrow filters rather than paging through large result sets.",
 		"fetched workflow runs",
 		z.object({
 			...workflowRunFiltersSchema,
@@ -109,7 +81,7 @@ export function registerActivityTools(server: McpServer, accessors: ToolAccessor
 					typeof data === "object" && data !== null && "next" in data ? data.next : undefined;
 				const body = JSON.stringify(data, null, 2);
 				if (next) {
-					return `Successfully fetched workflow runs. More results exist — narrow the filters or use get_activity_stats for counts rather than paging.\n\n${body}`;
+					return `Successfully fetched workflow runs. More results exist — narrow the filters rather than paging through large result sets.\n\n${body}`;
 				}
 
 				return `Successfully fetched workflow runs:\n\n${body}`;
