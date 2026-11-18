@@ -21,6 +21,13 @@
 
 <h1 align="center">Novu MCP Server</h1>
 
+> [!WARNING]
+> **This repository is deprecated and no longer maintained.**
+>
+> The Novu MCP server now lives in the Novu monorepo, which is the source of truth: [`novuhq/novu` → `apps/mcp-server`](https://github.com/novuhq/novu/tree/next/apps/mcp-server).
+>
+> Please open new issues and pull requests in [`novuhq/novu`](https://github.com/novuhq/novu). This repository will not receive further updates.
+
 <div align="center">
 The Model Context Protocol (MCP) server for Novu — bring AI assistants directly into your notification workflows. Manage subscribers, trigger workflows, inspect events, and tune preferences from any MCP-compatible client.
 </div>
